@@ -3,7 +3,7 @@ A Z80-based computer for nostalgic enthusiasts\
 ©2025 - ARMCoder\
 UPDATED 2025 - October 12
 
-<IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/kraft80-1.jpg?raw=true" width=600>
+<IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/20251105_182716.jpg?raw=true" width=600>
 
 
 ## Q & A
@@ -32,7 +32,7 @@ Then I've already built a first tentative true PCB for it, This one pictured her
 
 There's a newer revision already designed and ordered (not delivered yet). This revision (called 2.2) fixes some mistakes and add some expansion connectors:
 
-<IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/Captura%20de%20tela_2025-10-11_11-37-06.png?raw=true" width=600>
+<IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/20251105_183344.jpg?raw=true" width=600>
   
 Characteristics:
 ```

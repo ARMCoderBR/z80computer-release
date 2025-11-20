@@ -1,6 +1,7 @@
 # Kraft 80
 A Z80-based computer for nostalgic enthusiasts\
-©2025 - ARMCoder
+©2025 - ARMCoder\
+UPDATED 2025 - October 12
 
 <IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/kraft80-1.jpg?raw=true" width=600>
 
@@ -21,9 +22,17 @@ A Z80-based computer for nostalgic enthusiasts\
 
 ## What is the Kraft 80 computer, then?
 
-For now, it's this prototype:
+It's a homebrew computer in development. This is the first Kraft 80's prototype:
 
 <IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/kraft80-2.jpg?raw=true" width=600>
+
+Then I've already built a first tentative true PCB for it, This one pictured here is the Rev 2.0:
+
+<IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/IMG-20250930-WA0026.jpeg?raw=true" width=600>
+
+There's a newer revision already designed and ordered (not delivered yet). This revision (called 2.2) fixes some mistakes and add some expansion connectors:
+
+<IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/Captura%20de%20tela_2025-10-11_11-37-06.png?raw=true" width=600>
   
 Characteristics:
 ```
@@ -40,7 +49,7 @@ Characteristics:
 
   KEYBOARD: PS/2 compatible
 
-  SOUND: Mono, compatible with GI AY3-891x
+  SOUND: Mono, compatible with GI AY3-891x (the famous so-called 'PSG' used in MSX computers and others from the 80s)
 
   TIMER Interrupt: Fixed, 300 Hz
 
@@ -48,20 +57,15 @@ Characteristics:
 
   MICRO SD CARD CONTROLLER: Software still WIP, hardware already tested
 
-  POWER: 5V 1A (via USB, the same of the FTDI above)
+  POWER: 5V 1A (via USB, the same of the FTDI above), or a separate Power connector (barrel P4 jack in PCB Rev 2.2)
 
   EXTRA IOS:
     LCD Alphanumeric 16x2
     8 Pushbuttons
     8 Controllable LEDs
+    The Pushbuttons and LEDs also have corresponding expansion headers in PCB Rev 2.2.
 
 ```
-
-  As the hardware is reaching a decent level of maturity, I've already designed a PCB for it:
-
-  <IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/kraft80-pcb.png?raw=true" width=800>
-
-  Today (2025-09-14) I've got courageous and ordered a first run of 10 boards, let's see how well the design performs. I will keep you updated!
 
 
 What can the Kraft 80 currently do?

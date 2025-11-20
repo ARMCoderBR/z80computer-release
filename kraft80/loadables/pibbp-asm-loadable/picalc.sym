@@ -1,0 +1,62 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    .__.$$$.=  002710 L   |     .__.ABS.=  000000 G   |     .__.CPU.=  000000 L
+    .__.H$L.=  000000 L   |     EN      =  000001     |     NBITS   =  000038 
+    NBITS_FR=  000026     |     NBITS_FR=  000028     |     NBITS_IN=  000010 
+    NBYTES  =  000007     |     NBYTES1 =  000006     |     NBYTES_I=  000002 
+    NUM_DECS=  00000B     |     NUM_IT  =  000009     |     PORTA   =  000000 
+    PORTB   =  000010     |     PORTX   =  000000     |     RS      =  000001 
+  1 _main      000839 R   |   1 acc        000943 R   |   1 add_reg2   000051 R
+  1 add_reg2   00005F R   |   1 add_reg_   00006F R   |   1 aux1       000937 R
+  1 aux2       000939 R   |   1 b4aval     0008E8 R   |   1 b5aval     0008E1 R
+  1 b6aval     0008DA R   |   1 compare    0003C8 R   |   1 compare_   0003CB R
+  1 compare_   0003D6 R   |   1 d100ms     000934 R   |   1 d1ms       000922 R
+  1 dispcol    00094A R   |   1 div_acc_   0005BE R   |   1 div_reg2   0003E6 R
+  1 div_reg2   000424 R   |   1 div_reg2   00044E R   |   1 div_reg2   000483 R
+  1 div_reg2   0004A8 R   |   1 div_reg2   00050A R   |   1 div_reg2   0004E3 R
+  1 div_reg2   00051F R   |   1 div_reg2   000523 R   |   1 div_reg2   000555 R
+  1 div_reg2   0005A3 R   |   1 div_reg2   0005B5 R   |   1 dloop      000925 R
+  1 dx100ms    00092C R   |   1 dx1ms      00091A R   |   1 inc_reg_   000074 R
+  1 inc_reg_   00007B R   |   1 inc_reg_   000083 R   |   1 iszero     0003DA R
+  1 iszero_1   0003DE R   |   1 lcd_begi   00085A R   |   1 lcd_clea   000902 R
+  1 lcd_cmd    00089B R   |   1 lcd_en     0008EF R   |   1 lcd_home   00083D R
+  1 lcd_home   00084B R   |   1 lcd_w1     0008AB R   |   1 lcd_w2     0008B2 R
+  1 lcd_writ   00089F R   |   1 load_reg   00008A R   |   1 load_reg   00009E R
+  1 msg_init   00090B R   |   1 mul_acc_   000363 R   |   1 mul_reg2   000247 R
+  1 mul_reg2   0002AF R   |   1 mul_reg2   0002B3 R   |   1 mul_reg2   0002DF R
+  1 mul_reg2   0002E1 R   |   1 mul_reg2   00031C R   |   1 mul_reg2   000320 R
+  1 mul_reg2   00034C R   |   1 mul_reg2   00034E R   |   1 mul_reg2   00035B R
+  1 mul_reg_   00036A R   |   1 print_bc   000605 R   |   1 print_cr   00000F R
+  1 print_in   0005E1 R   |   1 print_in   0005C4 R   |   1 print_in   0005C7 R
+  1 print_in   0005D4 R   |   1 print_in   0005D0 R   |   1 print_in   0005D3 R
+  1 print_in   0005DB R   |   1 print_re   000626 R   |   1 print_re   00066C R
+  1 print_re   000675 R   |   1 print_re   000694 R   |   1 print_re   000694 R
+  1 println_   00069C R   |   1 prints     000003 R   |   1 prints_1   000004 R
+  1 prints_2   00000C R   |   1 rs_clr     0008D3 R   |   1 send_byt   0008BB R
+  1 send_nib   0008CA R   |   1 set_bit_   000021 R   |   1 set_bit_   000025 R
+  1 set_bit_   000042 R   |   1 set_bit_   000047 R   |   1 set_bit_   00004B R
+  1 shl_reg    0000C8 R   |   1 shl_reg_   0000E4 R   |   1 shl_reg_   0000E7 R
+  1 shl_reg_   000116 R   |   1 shl_reg_   000118 R   |   1 shl_reg_   000120 R
+  1 shl_reg_   00013B R   |   1 shl_reg_   000145 R   |   1 shl_reg_   00014E R
+  1 shl_reg_   00015F R   |   1 shl_reg_   00015B R   |   1 shl_reg_   000164 R
+  1 shr_reg    000184 R   |   1 shr_reg_   0001A0 R   |   1 shr_reg_   0001A3 R
+  1 shr_reg_   0001E0 R   |   1 shr_reg_   0001EC R   |   1 shr_reg_   0001F4 R
+  1 shr_reg_   000216 R   |   1 shr_reg_   000220 R   |   1 shr_reg_   000229 R
+  1 shr_reg_   00023A R   |   1 shr_reg_   000236 R   |   1 shr_reg_   00023F R
+  1 stack_te   00016C R   |   1 sub_reg2   0000A3 R   |   1 sub_reg2   0000B1 R
+  1 sub_reg_   0000C1 R   |   1 test_pi_   0006A3 R   |   1 test_pi_   0006D8 R
+  1 test_pi_   0006EB R   |   1 test_pi_   0007FB R   |   1 test_pi_   0007FB R
+  1 zero_reg   000016 R
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+Area Table
+
+   0 _CODE      size      0   flags    0
+   1 CODE       size    94B   flags    0
+   2 _DATA      size      0   flags    0
+

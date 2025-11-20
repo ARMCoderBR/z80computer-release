@@ -8,7 +8,7 @@ LCD control functions by Wagner Rambo - WR Kits - wrkits.com.br
 #include <stdio.h>
 #include "io-kraft80.h"
 
-#pragma codeseg MAIN
+#pragma codeseg CODE
 
 ////////////////////////////////////////////////////////////////////////////////
 char *lgets_noecho(char *buf, int bufsize){

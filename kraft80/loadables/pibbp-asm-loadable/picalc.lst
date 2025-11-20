@@ -1,0 +1,2416 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+
+
+                                      1 ;//////////////////////////////////////////////////////////////////////////////;
+                                      2 ; Project:                                                                     ;
+                                      3 ;    PICALC-Z80-KRAFT80                                                        ;
+                                      4 ;                                                                              ;
+                                      5 ; Description:                                                                 ;
+                                      6 ;    A calculator that yields an arbitrary number of digits of the number PI.  ;
+                                      7 ;                                                                              ;
+                                      8 ; Target:                                                                      ;
+                                      9 ;    The modified WR Kits' Z80 Alpha computer (AKA Z80 Alpha Plus by ARM Coder);
+                                     10 ;    Details of memory allocation and stack positioning must be adjusted for   ;
+                                     11 ;    the specifics of other targets, if any. In addition, INT 08h is used as a ;
+                                     12 ;    function call to print character over TTY (A = character), which          ;
+                                     13 ;    implementation has to be adjusted to the target.                          ;
+                                     14 ;                                                                              ;
+                                     15 ; Compiler:                                                                    ;
+                                     16 ;    Tasm + DosBox                                                             ;
+                                     17 ;                                                                              ;
+                                     18 ;    Other compilers/assemblers may require minor changes in the source code.  ;
+                                     19 ;                                                                              ;
+                                     20 ; Usage:                                                                       ;
+                                     21 ;    The desired amount of PI digits is defined in the macro NUM_DECS. Default ;
+                                     22 ;    value is 100. Note that incrementing this value will increase RAM usage   ;
+                                     23 ;    proportionally, and the needed CPU cycles quadratically. Don't change the ;
+                                     24 ;    other algorithm constants unless you really know what you are doing.      ;
+                                     25 ;                                                                              ;
+                                     26 ;    The algorithm was validated for 1,000 digits of PI, all of them checked   ;
+                                     27 ;    against the generally known published digits. For an actual Z80, yielding ;
+                                     28 ;    this number of digits may prove to be a daunting task, especially because ;
+                                     29 ;    of the gigantic number of CPU cycles needed (RAM is a lesser problem in   ;
+                                     30 ;    this regard). 100 digits is way more practical amount, unless you have A  ;
+                                     31 ;    LOT of time to spare.                                                     ;
+                                     32 ;                                                                              ;
+                                     33 ;    The main loop iteracts as many times as needed to calculate all the       ;
+                                     34 ;    decimal places requested (the number of iterations / number of digits have;
+                                     35 ;    a ratio close to 0.9). With each iteration the message 'TOTAL:' is printed;
+                                     36 ;    along the PI approximation calculated so far.                             ;
+                                     37 ;                                                                              ;
+                                     38 ; Version & Date:                                                              ;
+                                     39 ;    1.0 - 2025-MAY-13                                                         ;
+                                     40 ;                                                                              ;
+                                     41 ; Author:                                                                      ;
+                                     42 ;    Milton Maldonado Jr (ARM_Coder)                                           ;
+                                     43 ;                                                                              ;
+                                     44 ; License:                                                                     ;
+                                     45 ;    GPL V2                                                                    ;
+                                     46 ;                                                                              ;
+                                     47 ; Disclaimer:                                                                  ;
+                                     48 ;    This code is supplied 'as is' with no warranty against bugs. It was tested;
+                                     49 ;    on a Z80 simulator that *I* wrote (haha), so it was not tested against any;
+                                     50 ;    actual, validated target.                                                 ;
+                                     51 ;                                                                              ;
+                                     52 ; Note:                                                                        ;
+                                     53 ;    Along the ASM source, you will see some commented 'C' statemens. The      ;
+                                     54 ;    project was initially built and tested in C, and then hand-translated     ;
+                                     55 ;    to Z80 ASM.                                                               ;
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+
+
+                                     56 ;                                                                              ;
+                                     57 ; Funny note:                                                                  ;
+                                     58 ;    This project implements the Bailey-Borwein-Plouffe method of calculating  ;
+                                     59 ;    PI. This method is much, much faster that the classic Leibniz series.     ;
+                                     60 ;    The funny thing is that the method was discovered (invented?) in 1995,    ;
+                                     61 ;    when the Z80 had already passed its heyday and was fading into a niche,   ;
+                                     62 ;    retro platform.                                                           ;
+                                     63 ;//////////////////////////////////////////////////////////////////////////////;
+                                     64 
+                                     65 ; Hardware constants
+                           000000    66 PORTX           .equ 0x00 ;PORTX address 
+                           000000    67 PORTA           .equ 0x00 ;PORTA address 
+                           000010    68 PORTB           .equ 0x10 ;PORTB address 
+                                     69 
+                           000001    70 EN              .equ 0x01 ;LCD enable pin (PORTB bit 1)
+                           000001    71 RS              .equ 0x01 ;LCD RS pin (uses or logic)
+                                     72 
+                                     73 ; Algorithm constants
+                           00000B    74 NUM_DECS        .equ 11
+                           000009    75 NUM_IT          .equ ((NUM_DECS*9)/10)
+                           000026    76 NBITS_FR        .equ (3*NUM_DECS + (NUM_DECS >> 1))
+                           000010    77 NBITS_INT       .equ 16
+                           000028    78 NBITS_FRAC      .equ 8*(1 + (NBITS_FR >> 3)) ; The number of bits should be at least 3.33x (1 / log(2)) the number of decimal places, plus a small cushion.
+                           000002    79 NBYTES_INT      .equ NBITS_INT >> 3
+                           000038    80 NBITS           .equ NBITS_INT+NBITS_FRAC
+                           000007    81 NBYTES          .equ NBITS>>3
+                           000006    82 NBYTES1         .equ (NBYTES-1)
+                                     83 
+                                     84     .area	CODE
+                                     85 
+      000000 C3 39 08         [10]   86     jp _main
+                                     87 
+                                     88 ;///////////////////////////////////////////////////////////////////////////////
+                                     89 ;   prints
+                                     90 ;   void prints(const char *string);
+                                     91 ;   Parameters: The string must be supplied inline after the call to prints,
+                                     92 ;               and must be null-terminated. The function will return to the
+                                     93 ;               first instruction after the aforementioned null terminator.
+                                     94 ;               Because of that, the call must be always unconditional (opcode
+                                     95 ;               0xCD).
+                                     96 ;   Returns: Nothing
+                                     97 ;   Affects: HL, AF & whatever INT 08H also affects
+      000003                         98 prints:
+                                     99 
+      000003 E1               [10]  100     pop hl
+      000004                        101 prints_1:
+      000004 7E               [ 7]  102     ld a,(hl)
+      000005 B7               [ 4]  103     or a
+      000006 28 04            [12]  104     jr z,prints_2
+      000008 CF               [11]  105     rst 0x08
+      000009 23               [ 6]  106     inc hl
+      00000A 18 F8            [12]  107     jr prints_1
+      00000C                        108 prints_2:
+      00000C 23               [ 6]  109     inc hl
+      00000D E5               [11]  110     push hl
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 3.
+Hexadecimal [24-Bits]
+
+
+
+      00000E C9               [10]  111     ret
+                                    112 
+                                    113 ;///////////////////////////////////////////////////////////////////////////////
+                                    114 ;   print_crlf
+                                    115 ;   void print_crlf(void);
+                                    116 ;   Parameters: Nothing
+                                    117 ;   Returns: Nothing
+                                    118 ;   Affects: HL
+      00000F                        119 print_crlf:
+                                    120 
+      00000F CD 03 00         [17]  121     call prints
+      000012 0D 0A 00               122     .db 13,10,0
+      000015 C9               [10]  123     ret
+                                    124 
+                                    125 ;///////////////////////////////////////////////////////////////////////////////
+                                    126 ;   zero_reg
+                                    127 ;   void zero_reg(uint8_t *reg);
+                                    128 ;   Parameters:
+                                    129 ;     HL: reg
+                                    130 ;   Returns: Nothing
+                                    131 ;   Affects: BC DE HL AF
+      000016                        132 zero_reg:
+                                    133 
+                                    134     ;    memset(reg,0,NBYTES);
+      000016 01 06 00         [10]  135     ld bc,#(NBYTES-1)
+      000019 AF               [ 4]  136     xor a
+      00001A 77               [ 7]  137     ld (hl),a
+      00001B 54               [ 4]  138     ld d,h
+      00001C 5D               [ 4]  139     ld e,l
+      00001D 13               [ 6]  140     inc de
+      00001E ED B0            [21]  141     ldir
+      000020 C9               [10]  142     ret
+                                    143 
+                                    144 ;///////////////////////////////////////////////////////////////////////////////
+                                    145 ;   set_bit_reg
+                                    146 ;   void set_bit_reg(uint8_t *reg, int place);
+                                    147 ;   Parameters:
+                                    148 ;     HL: reg
+                                    149 ;     BC: place
+                                    150 ;   Returns: Nothing
+                                    151 ;   Affects: BC DE HL AF
+      000021                        152 set_bit_reg:
+                                    153 
+                                    154     ;   int byte = NBYTES1 - (place >> 3);
+      000021 E5               [11]  155     push hl
+      000022 21 06 00         [10]  156     ld hl,#NBYTES1
+                                    157 
+      000025                        158 set_bit_reg0:
+                                    159 
+      000025 50               [ 4]  160     ld d,b
+      000026 59               [ 4]  161     ld e,c
+      000027 CB 3A            [ 8]  162     srl d
+      000029 CB 1B            [ 8]  163     rr e
+      00002B CB 3A            [ 8]  164     srl d
+      00002D CB 1B            [ 8]  165     rr e
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 4.
+Hexadecimal [24-Bits]
+
+
+
+      00002F CB 3A            [ 8]  166     srl d
+      000031 CB 1B            [ 8]  167     rr e
+      000033 37               [ 4]  168     scf
+      000034 3F               [ 4]  169     ccf
+      000035 ED 52            [15]  170     sbc hl,de
+      000037 EB               [ 4]  171     ex de,hl    ;DE: byte
+      000038 E1               [10]  172     pop hl
+                                    173 
+                                    174     ;   int bits = place & 0x07;
+      000039 79               [ 4]  175     ld a,c
+      00003A E6 07            [ 7]  176     and #0x07    ;A: bits
+                                    177 
+                                    178     ;   reg[byte] |= 1<<bits;
+      00003C 19               [11]  179     add hl,de
+                                    180 
+      00003D 06 01            [ 7]  181     ld b,#1
+      00003F B7               [ 4]  182     or a
+      000040 28 05            [12]  183     jr z,set_bit_reg2
+                                    184 
+      000042                        185 set_bit_reg1:
+                                    186 
+      000042 CB 20            [ 8]  187     sla b
+      000044 3D               [ 4]  188     dec a
+      000045 20 FB            [12]  189     jr nz,set_bit_reg1
+                                    190 
+      000047                        191 set_bit_reg2:
+                                    192 
+      000047 7E               [ 7]  193     ld a,(hl)
+      000048 B0               [ 4]  194     or b
+      000049 77               [ 7]  195     ld (hl),a
+      00004A C9               [10]  196     ret
+                                    197 
+                                    198 ;///////////////////////////////////////////////////////////////////////////////
+                                    199 ;   set_bit_reg_int
+                                    200 ;   void set_bit_reg_int(uint8_t *reg, int place);
+                                    201 ;   Parameters:
+                                    202 ;     HL: reg
+                                    203 ;     BC: place
+                                    204 ;   Returns: Nothing
+                                    205 ;   Affects: BC DE HL AF
+      00004B                        206 set_bit_reg_int:
+                                    207 
+                                    208     ;   int byte = NBYTES_INT - 1 - (place >> 3);
+      00004B E5               [11]  209     push hl
+      00004C 21 01 00         [10]  210     ld hl,#(NBYTES_INT-1)
+      00004F 18 D4            [12]  211     jr set_bit_reg0
+                                    212 
+                                    213 ;///////////////////////////////////////////////////////////////////////////////
+                                    214 ;   print_reg
+                                    215 ;   void print_reg(uint8_t *reg);
+                                    216 ;   Não portada
+                                    217 
+                                    218 ;///////////////////////////////////////////////////////////////////////////////
+                                    219 ;   add_reg2_to_reg1
+                                    220 ;   void add_reg2_to_reg1(uint8_t *reg1, const uint8_t *reg2);
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 5.
+Hexadecimal [24-Bits]
+
+
+
+                                    221 ;   Parameters:
+                                    222 ;     HL: reg2
+                                    223 ;     DE: reg1
+                                    224 ;   Returns: Nothing
+                                    225 ;   Affects: BC DE HL AF BC' DE' HL' AF'
+      000051                        226 add_reg2_to_reg1:
+                                    227 
+                                    228     ;   uint16_t cy = 0;
+                                    229     ;   int i;
+                                    230     ;   for (i = NBYTES1; i >= 0; i--){
+                                    231     ;       uint16_t sum = (uint16_t)reg1[i] + (uint16_t)reg2[i] + cy;
+                                    232     ;       if (sum & 0x100)
+                                    233     ;           cy = 1;
+                                    234     ;       else
+                                    235     ;           cy = 0;
+                                    236     ;       reg1[i] = sum & 0xff;
+                                    237     ;   }
+                                    238 
+      000051 01 06 00         [10]  239     ld bc,#NBYTES1
+      000054 09               [11]  240     add hl,bc
+      000055 EB               [ 4]  241     ex de,hl
+      000056 09               [11]  242     add hl,bc
+      000057 EB               [ 4]  243     ex de,hl
+      000058 D9               [ 4]  244     exx
+      000059 01 06 00         [10]  245     ld bc,#NBYTES1
+      00005C 03               [ 6]  246     inc bc
+      00005D D9               [ 4]  247     exx
+      00005E 97               [ 4]  248     sub a   ;zero Carry Flag
+                                    249 
+      00005F                        250 add_reg2_to_reg1_0:
+                                    251 
+      00005F 46               [ 7]  252     ld b,(hl)
+      000060 1A               [ 7]  253     ld a,(de)
+      000061 88               [ 4]  254     adc a,b
+      000062 12               [ 7]  255     ld (de),a
+                                    256 
+      000063 2B               [ 6]  257     dec hl
+      000064 1B               [ 6]  258     dec de
+                                    259 
+      000065 D9               [ 4]  260     exx                         ; Save HL & DE, restores counter in BC
+      000066 08               [ 4]  261     ex af,af'                   ; Save CY
+      000067 0B               [ 6]  262     dec bc
+      000068 78               [ 4]  263     ld a,b
+      000069 B1               [ 4]  264     or c
+      00006A C8               [11]  265     ret z                       ; End loop, bye
+      00006B 08               [ 4]  266     ex af,af'                   ; Restore CY
+      00006C D9               [ 4]  267     exx                         ; Save counter in BC, restores HL & DE
+      00006D 18 F0            [12]  268     jr add_reg2_to_reg1_0
+                                    269 
+                                    270 ;///////////////////////////////////////////////////////////////////////////////
+                                    271 ;   add_reg_to_acc
+                                    272 ;   void add_reg_to_acc(const uint8_t *reg);
+                                    273 ;   Parameters:
+                                    274 ;     HL: reg
+                                    275 ;   Returns: Nothing
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 6.
+Hexadecimal [24-Bits]
+
+
+
+                                    276 ;   Affects: BC DE HL AF BC' DE' HL' AF'
+      00006F                        277 add_reg_to_acc:
+                                    278 
+      00006F 11 43 09         [10]  279     ld de,#acc
+      000072 18 DD            [12]  280     jr add_reg2_to_reg1
+                                    281 
+                                    282 ;///////////////////////////////////////////////////////////////////////////////
+                                    283 ;   inc_reg_int8
+                                    284 ;   void inc_reg_int8(uint8_t *reg, uint8_t byteval);
+                                    285 ;   Parameters:
+                                    286 ;     DE: reg
+                                    287 ;     A:  byteval
+                                    288 ;   Returns: Nothing
+                                    289 ;   Affects: BC DE HL AF BC' DE' HL' AF'
+      000074                        290 inc_reg_int8:
+                                    291 
+                                    292     ;    uint16_t cy = byteval;
+                                    293     ;    int i;
+                                    294     ;    for (i = NBYTES_INT - 1; i >= 0; i--){
+                                    295     ;        uint16_t sum =(uint16_t)reg[i] + cy;
+                                    296     ;        reg[i] = sum & 0xff;
+                                    297     ;        if (!(sum & 0x100))
+                                    298     ;            return;
+                                    299     ;        cy = 1;
+                                    300     ;    }
+                                    301 
+      000074 01 02 00         [10]  302     ld bc,#NBYTES_INT
+      000077 EB               [ 4]  303     ex de,hl
+      000078 09               [11]  304     add hl,bc
+      000079 2B               [ 6]  305     dec hl
+      00007A 5F               [ 4]  306     ld e,a
+                                    307 
+      00007B                        308 inc_reg_int8_0:
+                                    309 
+      00007B 7E               [ 7]  310     ld a,(hl)
+      00007C 83               [ 4]  311     add a,e
+      00007D 77               [ 7]  312     ld (hl),a
+                                    313 
+      00007E 1E 00            [ 7]  314     ld e,#0
+      000080 30 01            [12]  315     jr nc, inc_reg_int8_1
+      000082 1C               [ 4]  316     inc e       ; Here E propagates the carry for the sums.
+                                    317 
+      000083                        318 inc_reg_int8_1:
+                                    319 
+      000083 0B               [ 6]  320     dec bc
+      000084 78               [ 4]  321     ld a,b
+      000085 B1               [ 4]  322     or c
+      000086 C8               [11]  323     ret z                       ; End loop, bye
+                                    324 
+      000087 2B               [ 6]  325     dec hl
+      000088 18 F1            [12]  326     jr inc_reg_int8_0
+                                    327 
+                                    328 ;///////////////////////////////////////////////////////////////////////////////
+                                    329 ;   load_reg_int
+                                    330 ;   void load_reg_int(uint8_t *reg, int val);
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 7.
+Hexadecimal [24-Bits]
+
+
+
+                                    331 ;   Parameters:
+                                    332 ;     DE: reg
+                                    333 ;     HL: val
+                                    334 ;   Returns: Nothing
+                                    335 ;   Affects: BC DE HL AF BC' DE' HL' AF'
+      00008A                        336 load_reg_int:
+                                    337 
+                                    338 ;    for (int i = NBYTES_INT - 1; i >= 0; i--){
+                                    339 ;        reg[i] = val & 0xff;
+                                    340 ;        val >>= 8;
+                                    341 ;    }
+      00008A EB               [ 4]  342     ex de,hl
+      00008B 01 02 00         [10]  343     ld bc,#NBYTES_INT
+      00008E 09               [11]  344     add hl,bc
+      00008F 2B               [ 6]  345     dec hl
+      000090 06 02            [ 7]  346     ld b,#NBYTES_INT
+      000092 7B               [ 4]  347     ld a,e
+      000093 77               [ 7]  348     ld (hl),a
+      000094 2B               [ 6]  349     dec hl
+      000095 7A               [ 4]  350     ld a,d
+      000096 77               [ 7]  351     ld (hl),a
+      000097 05               [ 4]  352     dec b
+      000098 05               [ 4]  353     dec b
+      000099 78               [ 4]  354     ld a,b
+      00009A B7               [ 4]  355     or a
+      00009B C8               [11]  356     ret z
+      00009C 2B               [ 6]  357     dec hl
+      00009D AF               [ 4]  358     xor a
+      00009E                        359 load_reg_int_0:
+      00009E 77               [ 7]  360     ld (hl),a
+      00009F 2B               [ 6]  361     dec hl
+      0000A0 10 FC            [13]  362     djnz load_reg_int_0
+      0000A2 C9               [10]  363     ret
+                                    364 
+                                    365 ;///////////////////////////////////////////////////////////////////////////////
+                                    366 ;   sub_reg2_from_reg1
+                                    367 ;   void sub_reg2_from_reg1(uint8_t *reg1, const uint8_t *reg2);
+                                    368 ;   Parameters:
+                                    369 ;     DE: reg1
+                                    370 ;     HL: reg2
+                                    371 ;   Returns: Nothing
+                                    372 ;   Affects: BC DE HL AF BC' DE' HL' AF'
+      0000A3                        373 sub_reg2_from_reg1:
+                                    374 
+                                    375 ;    uint16_t cy = 0;
+                                    376 ;    int i;
+                                    377 ;    for (i = NBYTES1; i >= 0; i--){
+                                    378 ;        uint16_t diff = (uint16_t)reg1[i] - (uint16_t)reg2[i] - cy;
+                                    379 ;        if (diff & 0x8000)
+                                    380 ;            cy = 1;
+                                    381 ;        else
+                                    382 ;            cy = 0;
+                                    383 ;        reg1[i] = diff & 0xff;
+                                    384 ;    }
+                                    385 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 8.
+Hexadecimal [24-Bits]
+
+
+
+      0000A3 01 06 00         [10]  386     ld bc,#NBYTES1
+      0000A6 09               [11]  387     add hl,bc
+      0000A7 EB               [ 4]  388     ex de,hl
+      0000A8 09               [11]  389     add hl,bc
+      0000A9 EB               [ 4]  390     ex de,hl
+      0000AA D9               [ 4]  391     exx
+      0000AB 01 06 00         [10]  392     ld bc,#NBYTES1
+      0000AE 03               [ 6]  393     inc bc
+      0000AF D9               [ 4]  394     exx
+      0000B0 97               [ 4]  395     sub a   ;zera CY
+                                    396 
+      0000B1                        397 sub_reg2_to_reg1_0:
+                                    398 
+      0000B1 46               [ 7]  399     ld b,(hl)
+      0000B2 1A               [ 7]  400     ld a,(de)
+      0000B3 98               [ 4]  401     sbc a,b
+      0000B4 12               [ 7]  402     ld (de),a
+                                    403 
+      0000B5 2B               [ 6]  404     dec hl
+      0000B6 1B               [ 6]  405     dec de
+                                    406 
+      0000B7 D9               [ 4]  407     exx                         ; Save HL & DE, restores counter in BC
+      0000B8 08               [ 4]  408     ex af,af'                   ; Save CY
+      0000B9 0B               [ 6]  409     dec bc
+      0000BA 78               [ 4]  410     ld a,b
+      0000BB B1               [ 4]  411     or c
+      0000BC C8               [11]  412     ret z                       ; End loop, bye
+      0000BD 08               [ 4]  413     ex af,af'                   ; Restore CY
+      0000BE D9               [ 4]  414     exx                         ; Save counter in BC, restore HL & DE
+      0000BF 18 F0            [12]  415     jr sub_reg2_to_reg1_0
+                                    416 
+                                    417 ;///////////////////////////////////////////////////////////////////////////////
+                                    418 ;   sub_reg_from_acc
+                                    419 ;   void sub_reg_from_acc(const uint8_t *reg);
+                                    420 ;   Parameters:
+                                    421 ;     HL: reg
+                                    422 ;   Returns: Nothing
+                                    423 ;   Affects: BC DE HL AF BC' DE' HL' AF'
+      0000C1                        424 sub_reg_from_acc:
+                                    425 
+      0000C1 11 43 09         [10]  426     ld de,#acc
+      0000C4 CD A3 00         [17]  427     call sub_reg2_from_reg1
+      0000C7 C9               [10]  428     ret
+                                    429 
+                                    430 ;///////////////////////////////////////////////////////////////////////////////
+                                    431 ;   shl_reg
+                                    432 ;   void shl_reg(uint8_t *reg, int places)
+                                    433 ;   Parameters:
+                                    434 ;     DE: reg
+                                    435 ;     BC: places
+                                    436 ;   Returns: Nothing
+                                    437 ;   Affects: BC DE HL AF
+      0000C8                        438 shl_reg:
+                                    439 
+      0000C8 DD E5            [15]  440     push ix
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 9.
+Hexadecimal [24-Bits]
+
+
+
+      0000CA DD 21 F8 FF      [14]  441     ld ix,#0xFFF8    ; Allocates 8 bytes
+      0000CE DD 39            [15]  442     add ix,sp
+      0000D0 DD F9            [10]  443     ld sp,ix
+                                    444 
+      0000D2 DD 73 00         [19]  445     ld 0(ix),e     ;IX+0, IX+1 = 'reg'
+      0000D5 DD 72 01         [19]  446     ld 1(ix),d
+                                    447 
+                                    448 ;    if (places > NBITS)
+                                    449 ;        places = NBITS;
+      0000D8 3E 00            [ 7]  450     ld a,#(NBITS >> 8)
+      0000DA 90               [ 4]  451     sub b
+      0000DB 38 07            [12]  452     jr c,shl_reg_0
+      0000DD 20 08            [12]  453     jr nz,shl_reg_1
+                                    454 
+      0000DF 3E 38            [ 7]  455     ld a,#(NBITS & 255)
+      0000E1 91               [ 4]  456     sub c
+      0000E2 30 03            [12]  457     jr nc, shl_reg_1
+                                    458 
+      0000E4                        459 shl_reg_0:
+                                    460 
+      0000E4 01 38 00         [10]  461     ld bc,#NBITS
+                                    462 
+      0000E7                        463 shl_reg_1:
+                                    464 
+                                    465 ;    int bytes = places >> 3;
+                                    466 ;    int bits = places & 0x07;
+      0000E7 79               [ 4]  467     ld a,c
+      0000E8 E6 07            [ 7]  468     and #0x07
+      0000EA DD 77 02         [19]  469     ld 2(ix),a     ; IX+2 = 'bits'
+      0000ED CB 38            [ 8]  470     srl b
+      0000EF CB 19            [ 8]  471     rr c
+      0000F1 CB 38            [ 8]  472     srl b
+      0000F3 CB 19            [ 8]  473     rr c
+      0000F5 CB 38            [ 8]  474     srl b
+      0000F7 CB 19            [ 8]  475     rr c            ; BC = 'bytes'
+                                    476 
+                                    477 ;    int leftbytes = NBYTES - bytes;
+      0000F9 21 07 00         [10]  478     ld hl,#NBYTES
+      0000FC AF               [ 4]  479     xor a
+      0000FD ED 42            [15]  480     sbc hl,bc       ; HL = 'leftbytes'
+      0000FF DD 75 04         [19]  481     ld 4(ix),l     ; IX+4, IX+5 = 'leftbytes'
+      000102 DD 74 05         [19]  482     ld 5(ix),h
+                                    483 
+                                    484 ;    if (bytes){
+      000105 78               [ 4]  485     ld a,b
+      000106 B1               [ 4]  486     or c
+      000107 28 17            [12]  487     jr z,shl_reg_2
+                                    488 
+                                    489 ;        if (leftbytes)
+      000109 7C               [ 4]  490     ld a,h
+      00010A B5               [ 4]  491     or l
+      00010B 28 09            [12]  492     jr z,shl_reg_1a
+                                    493 
+      00010D C5               [11]  494     push bc         ; Save 'bytes'
+      00010E E5               [11]  495     push hl         ; Save 'leftbytes'
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 10.
+Hexadecimal [24-Bits]
+
+
+
+                                    496 
+                                    497 ;            memmove(&reg[0], &reg[bytes], leftbytes);
+      00010F 62               [ 4]  498     ld h,d
+      000110 6B               [ 4]  499     ld l,e
+      000111 09               [11]  500     add hl,bc       ; DE='reg' HL='reg[bytes]'
+      000112 C1               [10]  501     pop bc          ; Restore 'leftbytes'
+      000113 ED B0            [21]  502     ldir
+                                    503 
+      000115 C1               [10]  504     pop bc          ; Restore 'bytes'
+                                    505 
+      000116                        506 shl_reg_1a:
+                                    507 
+                                    508 ;        memset(&reg[leftbytes],0,bytes);
+                                    509 ;    }
+                                    510 
+      000116 62               [ 4]  511     ld h,d  ; Here DE points to the 1st byte to fill w/ zero (obtained from the
+      000117 6B               [ 4]  512     ld l,e  ; previous LDIR if it took place, or the previous value).
+                                    513 
+      000118                        514 shl_reg_1b:
+                                    515 
+      000118 AF               [ 4]  516     xor a
+      000119 77               [ 7]  517     ld (hl),a
+      00011A 23               [ 6]  518     inc hl
+      00011B 0B               [ 6]  519     dec bc
+      00011C 78               [ 4]  520     ld a,b
+      00011D B1               [ 4]  521     or c
+      00011E 20 F8            [12]  522     jr nz,shl_reg_1b
+                                    523 
+      000120                        524 shl_reg_2:
+                                    525 
+                                    526 ;    if (bits){
+      000120 DD 7E 02         [19]  527     ld a,2(ix)     ; 'bits'
+      000123 B7               [ 4]  528     or a
+      000124 28 3E            [12]  529     jr z,shl_reg_end
+                                    530 
+                                    531 ;        for (i = 0; i < (leftbytes-1); i++){
+                                    532     ; Vai fazer o shift
+      000126 DD 4E 04         [19]  533     ld c,4(ix)
+      000129 DD 46 05         [19]  534     ld b,5(ix)     ;'leftbytes'
+      00012C 78               [ 4]  535     ld a,b
+      00012D B1               [ 4]  536     or c
+      00012E 28 2B            [12]  537     jr z,shl_reg_3
+      000130 0B               [ 6]  538     dec bc
+      000131 78               [ 4]  539     ld a,b
+      000132 B1               [ 4]  540     or c
+      000133 28 26            [12]  541     jr z,shl_reg_3
+                                    542 
+      000135 DD 6E 00         [19]  543     ld l,(ix)
+      000138 DD 66 01         [19]  544     ld h,1(ix)     ; HL = 'reg'
+                                    545 
+      00013B                        546 shl_reg_2a:
+                                    547 
+                                    548 ;            reg[i] <<= bits;
+      00013B DD 7E 02         [19]  549     ld a,2(ix)     ; 'bits'
+      00013E 5F               [ 4]  550     ld e,a          ; 'bits'
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 11.
+Hexadecimal [24-Bits]
+
+
+
+      00013F ED 44            [ 8]  551     neg
+      000141 C6 08            [ 7]  552     add a,#8
+      000143 57               [ 4]  553     ld d,a
+      000144 7E               [ 7]  554     ld a,(hl)
+                                    555 
+      000145                        556 shl_reg_2b:
+                                    557 
+      000145 CB 27            [ 8]  558     sla a
+      000147 1D               [ 4]  559     dec e
+      000148 20 FB            [12]  560     jr nz,shl_reg_2b
+                                    561 
+                                    562 ;            uint8_t aux = reg[i+1] >> (8-bits);
+      00014A 5F               [ 4]  563     ld e,a
+                                    564 
+      00014B 23               [ 6]  565     inc hl
+      00014C 7E               [ 7]  566     ld a,(hl)
+      00014D 2B               [ 6]  567     dec hl
+                                    568 
+      00014E                        569 shl_reg_2c:
+                                    570 
+      00014E CB 3F            [ 8]  571     srl a
+      000150 15               [ 4]  572     dec d
+      000151 20 FB            [12]  573     jr nz,shl_reg_2c
+                                    574 
+                                    575 ;            reg[i] |= aux;
+                                    576 ;        }
+      000153 B3               [ 4]  577     or e
+      000154 77               [ 7]  578     ld (hl),a
+      000155 23               [ 6]  579     inc hl
+                                    580 
+      000156 0B               [ 6]  581     dec bc
+      000157 78               [ 4]  582     ld a,b
+      000158 B1               [ 4]  583     or c
+      000159 20 E0            [12]  584     jr nz,shl_reg_2a
+                                    585 
+      00015B                        586 shl_reg_3:
+                                    587 ;        reg[leftbytes - 1] <<= bits;
+      00015B 7E               [ 7]  588     ld a,(hl)
+      00015C DD 46 02         [19]  589     ld b,2(IX)     ; 'bits'
+                                    590 
+      00015F                        591 shl_reg_2d:
+                                    592 
+      00015F CB 27            [ 8]  593     sla a
+      000161 10 FC            [13]  594     djnz shl_reg_2d
+                                    595 
+      000163 77               [ 7]  596     ld (hl),a
+                                    597 
+                                    598 ;    }
+                                    599 
+      000164                        600 shl_reg_end:
+                                    601 
+      000164 21 08 00         [10]  602     ld hl,#0x0008    ; Frees 8 bytes
+      000167 39               [11]  603     add hl,sp
+      000168 F9               [ 6]  604     ld sp,hl
+      000169 DD E1            [14]  605     pop ix
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 12.
+Hexadecimal [24-Bits]
+
+
+
+      00016B C9               [10]  606     ret
+                                    607 
+                                    608 ;///////////////////////////////////////////////////////////////////////////////
+      00016C                        609 stack_test:
+                                    610 
+      00016C DD E5            [15]  611     push ix
+      00016E DD 21 F8 FF      [14]  612     ld ix,#0xFFF8    ; Allocates 8 bytes
+      000172 DD 39            [15]  613     add ix,sp
+      000174 DD F9            [10]  614     ld sp,ix
+                                    615 
+      000176 DD 4E 00         [19]  616     ld c,(ix)
+      000179 DD 46 01         [19]  617     ld b,1(ix)
+                                    618     ;....
+      00017C 21 08 00         [10]  619     ld hl,#0x0008    ; Frees 8 bytes
+      00017F 39               [11]  620     add hl,sp
+      000180 F9               [ 6]  621     ld sp,hl
+      000181 DD E1            [14]  622     pop ix
+      000183 C9               [10]  623     ret
+                                    624 
+                                    625 ;///////////////////////////////////////////////////////////////////////////////
+                                    626 ;   shr_reg
+                                    627 ;   void shr_reg(uint8_t *reg, int places);
+                                    628 ;   Parameters:
+                                    629 ;     DE: reg
+                                    630 ;     BC: places
+                                    631 ;   Returns: Nothing
+                                    632 ;   Affects: BC DE HL AF
+      000184                        633 shr_reg:
+                                    634 
+      000184 DD E5            [15]  635     push ix
+      000186 DD 21 F8 FF      [14]  636     ld ix,#0xFFF8    ; Allocates 8 bytes
+      00018A DD 39            [15]  637     add ix,sp
+      00018C DD F9            [10]  638     ld sp,ix
+                                    639 
+      00018E DD 73 00         [19]  640     ld (ix),e     ; IX+0, IX+1 = 'reg'
+      000191 DD 72 01         [19]  641     ld 1(ix),d
+                                    642 
+                                    643 ;    if (places > NBITS)
+                                    644 ;        places = NBITS;
+      000194 3E 00            [ 7]  645     ld a,#(NBITS >> 8)
+      000196 90               [ 4]  646     sub b
+      000197 38 07            [12]  647     jr c,shr_reg_0
+      000199 20 08            [12]  648     jr nz,shr_reg_1
+                                    649 
+      00019B 3E 38            [ 7]  650     ld a,#(NBITS & #255)
+      00019D 91               [ 4]  651     sub c
+      00019E 30 03            [12]  652     jr nc, shr_reg_1
+                                    653 
+      0001A0                        654 shr_reg_0:
+                                    655 
+      0001A0 01 38 00         [10]  656     ld bc,#NBITS
+                                    657 
+      0001A3                        658 shr_reg_1:
+                                    659 
+                                    660 ;    int bytes = places >> 3;
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 13.
+Hexadecimal [24-Bits]
+
+
+
+                                    661 ;    int bits = places & 0x07;
+      0001A3 79               [ 4]  662     ld a,c
+      0001A4 E6 07            [ 7]  663     and #0x07
+      0001A6 DD 77 02         [19]  664     ld 2(ix),a     ; IX+2 = 'bits'
+      0001A9 CB 38            [ 8]  665     srl b
+      0001AB CB 19            [ 8]  666     rr c
+      0001AD CB 38            [ 8]  667     srl b
+      0001AF CB 19            [ 8]  668     rr c
+      0001B1 CB 38            [ 8]  669     srl b
+      0001B3 CB 19            [ 8]  670     rr c            ; BC = 'bytes'
+      0001B5 DD 71 06         [19]  671     ld 6(ix),c
+      0001B8 DD 70 07         [19]  672     ld 7(ix),b     ; IX+6, IX+7 = 'bytes'
+                                    673 
+                                    674 ;    int rightbytes = NBYTES - bytes;
+      0001BB 21 07 00         [10]  675     ld hl,#NBYTES
+      0001BE AF               [ 4]  676     xor a
+      0001BF ED 42            [15]  677     sbc hl,bc       ; HL = 'rightbytes'
+      0001C1 DD 75 04         [19]  678     ld 4(ix),l     ; IX+4, IX+5 = 'rightbytes'
+      0001C4 DD 74 05         [19]  679     ld 5(ix),h
+                                    680 
+                                    681 ;    if (bytes){
+      0001C7 78               [ 4]  682     ld a,b
+      0001C8 B1               [ 4]  683     or c
+      0001C9 28 29            [12]  684     jr z,shr_reg_2
+                                    685 
+                                    686 ;        if (rightbytes)
+      0001CB 7C               [ 4]  687     ld a,h
+      0001CC B5               [ 4]  688     or l
+      0001CD 28 11            [12]  689     jr z,shr_reg_1a
+                                    690 
+                                    691 ;            memmove(&reg[bytes], &reg[0], rightbytes);
+      0001CF 21 06 00         [10]  692     ld hl,#NBYTES1
+      0001D2 19               [11]  693     add hl,de
+      0001D3 54               [ 4]  694     ld d,h
+      0001D4 5D               [ 4]  695     ld e,l          ; DE = last buffer's byte (destination)
+                                    696 
+      0001D5 AF               [ 4]  697     xor a           ; BC = 'bytes'
+      0001D6 ED 42            [15]  698     sbc hl,bc       ; HL = origem
+      0001D8 DD 4E 04         [19]  699     ld c,4(ix)     ; 'rightbytes'
+      0001DB DD 46 05         [19]  700     ld b,5(ix)
+      0001DE ED B8            [21]  701     lddr
+                                    702 
+      0001E0                        703 shr_reg_1a:
+                                    704 
+                                    705 ;        memset(&reg[0],0,bytes);
+      0001E0 DD 4E 06         [19]  706     ld c,6(ix)
+      0001E3 DD 46 07         [19]  707     ld b,7(ix)     ; IX+6, IX+7 = 'bytes'
+      0001E6 DD 6E 00         [19]  708     ld l,0(ix)
+      0001E9 DD 66 01         [19]  709     ld h,1(ix)     ; IX+0, IX+1 = 'reg'
+                                    710 
+      0001EC                        711 shr_reg_1b:
+                                    712 
+      0001EC AF               [ 4]  713     xor a
+      0001ED 77               [ 7]  714     ld (hl),a
+      0001EE 23               [ 6]  715     inc hl
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 14.
+Hexadecimal [24-Bits]
+
+
+
+      0001EF 0B               [ 6]  716     dec bc
+      0001F0 78               [ 4]  717     ld a,b
+      0001F1 B1               [ 4]  718     or c
+      0001F2 20 F8            [12]  719     jr nz,shr_reg_1b
+                                    720 
+                                    721 ;    }
+                                    722 
+      0001F4                        723 shr_reg_2:
+                                    724 
+                                    725 ;    if (bits){
+      0001F4 DD 7E 02         [19]  726     ld a,2(ix)     ; 'bits'
+      0001F7 B7               [ 4]  727     or a
+      0001F8 28 45            [12]  728     jr z,shr_reg_end
+                                    729 
+                                    730 
+                                    731 ;        for (i = NBYTES1; i > bytes; i--){
+      0001FA 21 06 00         [10]  732     ld hl,#NBYTES1
+      0001FD DD 4E 06         [19]  733     ld c,6(ix)
+      000200 DD 46 07         [19]  734     ld b,7(ix)     ; IX+6, IX+7 = 'bytes'
+      000203 AF               [ 4]  735     xor a
+      000204 ED 42            [15]  736     sbc hl,bc
+                                    737 
+      000206 7C               [ 4]  738     ld a,h
+      000207 B5               [ 4]  739     or l
+      000208 28 2C            [12]  740     jr z,shr_reg_2e
+                                    741 
+      00020A 44               [ 4]  742     ld b,h
+      00020B 4D               [ 4]  743     ld c,l          ; BC = # of bytes to process
+                                    744 
+      00020C DD 6E 00         [19]  745     ld l,0(ix)
+      00020F DD 66 01         [19]  746     ld h,1(ix)     ; HL = 'reg'
+                                    747 
+      000212 11 06 00         [10]  748     ld de,#NBYTES1
+      000215 19               [11]  749     add hl,de
+                                    750 
+      000216                        751 shr_reg_2a:
+                                    752 
+                                    753 ;            reg[i] >>= bits;
+      000216 DD 7E 02         [19]  754     ld a,2(ix)     ; 'bits'
+      000219 5F               [ 4]  755     ld e,a          ; E = 'bits'
+      00021A ED 44            [ 8]  756     neg
+      00021C C6 08            [ 7]  757     add a,#8
+      00021E 57               [ 4]  758     ld d,a          ; D = 8 - 'bits'
+      00021F 7E               [ 7]  759     ld a,(hl)
+                                    760 
+      000220                        761 shr_reg_2b:
+                                    762 
+      000220 CB 3F            [ 8]  763     srl a
+      000222 1D               [ 4]  764     dec e
+      000223 20 FB            [12]  765     jr nz,shr_reg_2b
+                                    766 
+      000225 5F               [ 4]  767     ld e,a
+                                    768 
+                                    769 ;            uint8_t aux = reg[i-1] << (8-bits);
+      000226 2B               [ 6]  770     dec hl
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 15.
+Hexadecimal [24-Bits]
+
+
+
+      000227 7E               [ 7]  771     ld a,(hl)
+      000228 23               [ 6]  772     inc hl
+                                    773 
+      000229                        774 shr_reg_2c:
+                                    775 
+      000229 CB 27            [ 8]  776     sla a
+      00022B 15               [ 4]  777     dec d
+      00022C 20 FB            [12]  778     jr nz,shr_reg_2c
+                                    779 
+                                    780 ;            reg[i] |= aux;
+      00022E B3               [ 4]  781     or e
+      00022F 77               [ 7]  782     ld (hl),a
+                                    783 
+                                    784 ;        }
+      000230 2B               [ 6]  785     dec hl
+      000231 0B               [ 6]  786     dec bc
+      000232 78               [ 4]  787     ld a,b
+      000233 B1               [ 4]  788     or c
+      000234 20 E0            [12]  789     jr nz,shr_reg_2a
+                                    790 
+      000236                        791 shr_reg_2e:
+                                    792 
+                                    793 ;        reg[bytes] >>= bits;
+      000236 7E               [ 7]  794     ld a,(hl)
+      000237 DD 46 02         [19]  795     ld b,2(IX)     ; 'bits'
+                                    796 
+      00023A                        797 shr_reg_2d:
+      00023A CB 3F            [ 8]  798     srl a
+      00023C 10 FC            [13]  799     djnz shr_reg_2d
+      00023E 77               [ 7]  800     ld (hl),a
+                                    801 
+                                    802 ;    }
+                                    803 
+      00023F                        804 shr_reg_end:
+                                    805 
+      00023F 21 08 00         [10]  806     ld hl,#0x0008    ; Frees 8 bytes
+      000242 39               [11]  807     add hl,sp
+      000243 F9               [ 6]  808     ld sp,hl
+      000244 DD E1            [14]  809     pop ix
+      000246 C9               [10]  810     ret
+                                    811 
+                                    812 ;///////////////////////////////////////////////////////////////////////////////
+                                    813 ;   mul_reg2_by_reg1
+                                    814 ;   void mul_reg2_by_reg1(const uint8_t *reg1, uint8_t *reg2);
+                                    815 ;   Parameters:
+                                    816 ;     HL: reg1
+                                    817 ;     DE: reg2
+                                    818 ;   Returns: Nothing
+                                    819 ;   Affects: BC DE HL AF IY BC' DE' HL' AF'
+      000247                        820 mul_reg2_by_reg1:
+                                    821 
+      000247 DD E5            [15]  822     push ix
+      000249 DD 21 EA FF      [14]  823     ld ix,#(0xFFF8-2*NBYTES)    ; Allocates 8 bytes + 2 buffers
+      00024D DD 39            [15]  824     add ix,sp
+      00024F DD F9            [10]  825     ld sp,ix
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 16.
+Hexadecimal [24-Bits]
+
+
+
+                                    826 
+      000251 DD 75 00         [19]  827     ld (ix),l
+      000254 DD 74 01         [19]  828     ld 1(ix),h         ; IX+0, IX+1: reg1
+      000257 DD 73 02         [19]  829     ld 2(ix),e
+      00025A DD 72 03         [19]  830     ld 3(ix),d         ; IX+2, IX+3: reg2
+                                    831 
+                                    832 ;    uint8_t regmdiv[NBYTES];
+      00025D DD                     833     .db 0xdd
+      00025E 4D               [ 4]  834     ld c,l
+      00025F DD                     835     .db 0xdd
+      000260 44               [ 4]  836     ld b,h            ; Copia IX em BC
+      000261 21 08 00         [10]  837     ld HL,#8
+      000264 09               [11]  838     add hl,bc
+      000265 DD 75 04         [19]  839     ld 4(ix),l
+      000268 DD 74 05         [19]  840     ld 5(ix),h         ; IX+4, IX+5: regmdiv
+                                    841 
+                                    842 ;    uint8_t regmdiv2[NBYTES];
+      00026B 01 07 00         [10]  843     ld bc,#NBYTES
+      00026E 09               [11]  844     add hl,bc
+      00026F DD 75 06         [19]  845     ld 6(ix),l
+      000272 DD 74 07         [19]  846     ld 7(ix),h         ; IX+6, IX+7: regmdiv2
+                                    847 
+                                    848 ;    memcpy(regmdiv, reg2, NBYTES);
+      000275 DD 5E 04         [19]  849     ld e,4(ix)
+      000278 DD 56 05         [19]  850     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      00027B DD 6E 02         [19]  851     ld l,2(ix)
+      00027E DD 66 03         [19]  852     ld h,3(ix)         ; IX+2, IX+3: reg2
+      000281 01 07 00         [10]  853     ld bc,#NBYTES
+      000284 ED B0            [21]  854     ldir
+                                    855 
+                                    856 ;    memcpy(regmdiv2, reg2, NBYTES);
+      000286 DD 5E 06         [19]  857     ld e,6(ix)
+      000289 DD 56 07         [19]  858     ld d,7(ix)         ; IX+6, IX+7: regmdiv2
+      00028C DD 6E 02         [19]  859     ld l,2(ix)
+      00028F DD 66 03         [19]  860     ld h,3(ix)         ; IX+2, IX+3: reg2
+      000292 01 07 00         [10]  861     ld bc,#NBYTES
+      000295 ED B0            [21]  862     ldir
+                                    863 
+                                    864 ;    zero_reg(reg2);
+      000297 DD 6E 02         [19]  865     ld l,2(ix)
+      00029A DD 66 03         [19]  866     ld h,3(ix)
+      00029D CD 16 00         [17]  867     call zero_reg       ;Zera reg2
+                                    868 
+                                    869 ;    int places = 0;
+      0002A0 FD 21 00 00      [14]  870     ld iy,#0            ; IY = places
+                                    871 
+                                    872 ;    // Integer part
+                                    873 ;    for (int i = NBYTES_INT-1; i>=0; i--){
+                                    874 
+      0002A4 01 02 00         [10]  875     ld bc,#NBYTES_INT
+      0002A7 DD 6E 00         [19]  876     ld l,(ix)
+      0002AA DD 66 01         [19]  877     ld h,1(ix)       ; IX+0, IX+1: reg1
+      0002AD 09               [11]  878     add hl,bc
+      0002AE 2B               [ 6]  879     dec hl            ; HL: buffer to process
+                                    880 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 17.
+Hexadecimal [24-Bits]
+
+
+
+      0002AF                        881 mul_reg2_by_reg1_1:
+                                    882 
+                                    883 ;        int msk = 1;
+      0002AF 16 01            [ 7]  884     ld d,#1
+                                    885 
+                                    886 ;        for (int j = 0; j < 8; j++){
+      0002B1 1E 08            [ 7]  887     ld e,#8
+                                    888 
+      0002B3                        889 mul_reg2_by_reg1_2:
+                                    890 
+                                    891 ;            if (reg1[i] & msk){
+      0002B3 7E               [ 7]  892     ld a,(hl)
+      0002B4 A2               [ 4]  893     and d
+      0002B5 28 28            [12]  894     jr z, mul_reg2_by_reg1_3
+                                    895 
+                                    896 ;                shl_reg(regmdiv,places);
+      0002B7 C5               [11]  897     push bc
+      0002B8 D5               [11]  898     push de
+      0002B9 E5               [11]  899     push hl
+                                    900 
+      0002BA DD 5E 04         [19]  901     ld e,4(ix)
+      0002BD DD 56 05         [19]  902     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      0002C0 FD                     903     .db 0xfd
+      0002C1 44               [ 4]  904     ld b,h
+      0002C2 FD                     905     .db 0xfd
+      0002C3 4D               [ 4]  906     ld c,l            ; BC gets IY = 'places'
+      0002C4 CD C8 00         [17]  907     call shl_reg
+                                    908 
+                                    909 ;                add_reg2_to_reg1(reg2, regmdiv);
+      0002C7 DD 5E 02         [19]  910     ld e,2(ix)
+      0002CA DD 56 03         [19]  911     ld d,3(ix)         ; IX+2, IX+3: reg2
+      0002CD DD 6E 04         [19]  912     ld l,4(ix)
+      0002D0 DD 66 05         [19]  913     ld h,5(ix)         ; IX+4, IX+5: regmdiv
+      0002D3 CD 51 00         [17]  914     call add_reg2_to_reg1
+                                    915 
+      0002D6 E1               [10]  916     pop hl
+      0002D7 D1               [10]  917     pop de
+      0002D8 C1               [10]  918     pop bc
+                                    919 
+                                    920 ;                places = 1;
+      0002D9 FD 21 01 00      [14]  921     ld iy,#1     ; IY = places
+                                    922 ;            }
+                                    923 ;            else
+                                    924 ;                places++;
+      0002DD 18 02            [12]  925     jr mul_reg2_by_reg1_4
+                                    926 
+      0002DF                        927 mul_reg2_by_reg1_3:
+                                    928 
+      0002DF FD 23            [10]  929     inc iy
+                                    930 
+      0002E1                        931 mul_reg2_by_reg1_4:
+                                    932 
+                                    933 ;            msk <<= 1;
+      0002E1 7A               [ 4]  934     ld a,d
+      0002E2 CB 27            [ 8]  935     sla a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 18.
+Hexadecimal [24-Bits]
+
+
+
+      0002E4 57               [ 4]  936     ld d,a
+                                    937 
+                                    938 ;        }
+      0002E5 1D               [ 4]  939     dec e
+      0002E6 20 CB            [12]  940     jr nz,mul_reg2_by_reg1_2
+                                    941 
+                                    942 ;    }
+      0002E8 2B               [ 6]  943     dec hl
+      0002E9 0B               [ 6]  944     dec bc
+      0002EA 78               [ 4]  945     ld a,b
+      0002EB B1               [ 4]  946     or c
+      0002EC 20 C1            [12]  947     jr nz,mul_reg2_by_reg1_1
+                                    948 
+                                    949 ;    memcpy(regmdiv, regmdiv2, NBYTES);
+      0002EE DD 6E 06         [19]  950     ld l,6(ix)
+      0002F1 DD 66 07         [19]  951     ld h,7(ix)         ; IX+6, IX+7: regmdiv2
+      0002F4 DD 5E 04         [19]  952     ld e,4(ix)
+      0002F7 DD 56 05         [19]  953     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      0002FA 01 07 00         [10]  954     ld bc,#NBYTES
+      0002FD ED B0            [21]  955     ldir
+                                    956 
+                                    957 ;    shr_reg(regmdiv,1);
+      0002FF DD 5E 04         [19]  958     ld e,4(ix)
+      000302 DD 56 05         [19]  959     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      000305 01 01 00         [10]  960     ld bc,#1
+      000308 CD 84 01         [17]  961     call shr_reg
+                                    962 
+                                    963 ;    places = 0;
+      00030B FD 21 00 00      [14]  964     ld iy,#0
+                                    965 
+                                    966 ;    //Frac part
+                                    967 ;    for (int i = NBYTES_INT; i < NBYTES; i++){
+      00030F DD 6E 00         [19]  968     ld l,(ix)
+      000312 DD 66 01         [19]  969     ld h,1(ix)         ; IX+0, IX+1: reg1
+      000315 01 02 00         [10]  970     ld bc,#NBYTES_INT
+      000318 09               [11]  971     add hl,bc
+      000319 01 05 00         [10]  972     ld bc, #(NBYTES - NBYTES_INT)
+                                    973 
+      00031C                        974 mul_reg2_by_reg1_5:
+                                    975 
+                                    976 ;        int msk = 128;
+      00031C 16 80            [ 7]  977     ld d,#128
+                                    978 
+                                    979 ;        for (int j = 0; j < 8; j++){
+      00031E 1E 08            [ 7]  980     ld e,#8
+                                    981 
+      000320                        982 mul_reg2_by_reg1_6:
+                                    983 
+                                    984 ;            if (reg1[i] & msk){
+      000320 7E               [ 7]  985     ld a,(hl)
+      000321 A2               [ 4]  986     and d
+      000322 28 28            [12]  987     jr z,mul_reg2_by_reg1_7
+                                    988 
+      000324 C5               [11]  989     push bc
+      000325 D5               [11]  990     push de
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 19.
+Hexadecimal [24-Bits]
+
+
+
+      000326 E5               [11]  991     push hl
+                                    992 
+                                    993 ;                shr_reg(regmdiv,places);
+      000327 DD 5E 04         [19]  994     ld e,4(ix)
+      00032A DD 56 05         [19]  995     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      00032D FD                     996     .db 0xfd
+      00032E 44               [ 4]  997     ld b,h
+      00032F FD                     998     .db 0xfd
+      000330 4D               [ 4]  999     ld c,l            ; BC <- IY = 'places'
+      000331 CD 84 01         [17] 1000     call shr_reg
+                                   1001 
+                                   1002 ;                add_reg2_to_reg1(reg2, regmdiv);
+      000334 DD 5E 02         [19] 1003     ld e,2(ix)
+      000337 DD 56 03         [19] 1004     ld d,3(ix)         ; IX+2, IX+3: reg2
+      00033A DD 6E 04         [19] 1005     ld l,4(ix)
+      00033D DD 66 05         [19] 1006     ld h,5(ix)         ; IX+4, IX+5: regmdiv
+      000340 CD 51 00         [17] 1007     call add_reg2_to_reg1
+                                   1008 
+      000343 E1               [10] 1009     pop hl
+      000344 D1               [10] 1010     pop de
+      000345 C1               [10] 1011     pop bc
+                                   1012 
+                                   1013 ;                places = 1;
+      000346 FD 21 01 00      [14] 1014     ld iy,#1
+      00034A 18 02            [12] 1015     jr mul_reg2_by_reg1_8
+                                   1016 ;            }
+                                   1017 ;            else
+                                   1018 ;                places++;
+      00034C                       1019 mul_reg2_by_reg1_7:
+                                   1020 
+      00034C FD 23            [10] 1021     inc iy
+                                   1022 
+      00034E                       1023 mul_reg2_by_reg1_8:
+                                   1024 
+                                   1025 ;            msk >>= 1;
+      00034E 7A               [ 4] 1026     ld a,d
+      00034F CB 3F            [ 8] 1027     srl a
+      000351 57               [ 4] 1028     ld d,a
+                                   1029 
+                                   1030 ;        }
+      000352 1D               [ 4] 1031     dec e
+      000353 20 CB            [12] 1032     jr nz, mul_reg2_by_reg1_6
+                                   1033 
+                                   1034 ;    }
+      000355 23               [ 6] 1035     inc hl
+      000356 0B               [ 6] 1036     dec bc
+      000357 78               [ 4] 1037     ld a,b
+      000358 B1               [ 4] 1038     or c
+      000359 20 C1            [12] 1039     jr nz,mul_reg2_by_reg1_5
+                                   1040 
+      00035B                       1041 mul_reg2_by_reg1_end:
+                                   1042 
+      00035B 21 16 00         [10] 1043     ld hl,#(0x0008+(2*NBYTES))    ; Frees 8 bytes + 2 buffers
+      00035E 39               [11] 1044     add hl,sp
+      00035F F9               [ 6] 1045     ld sp,hl
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 20.
+Hexadecimal [24-Bits]
+
+
+
+      000360 DD E1            [14] 1046     pop ix
+      000362 C9               [10] 1047     ret
+                                   1048 
+                                   1049 ;///////////////////////////////////////////////////////////////////////////////
+                                   1050 ;   mul_acc_by_reg
+                                   1051 ;   void mul_acc_by_reg(const uint8_t *reg);
+                                   1052 ;   Parameters:
+                                   1053 ;     HL: reg
+                                   1054 ;   Returns: Nothing
+                                   1055 ;   Affects: BC DE HL AF IY BC' DE' HL' AF'
+      000363                       1056 mul_acc_by_reg:
+                                   1057 
+                                   1058 ;    mul_reg2_by_reg1(reg, acc);
+      000363 11 43 09         [10] 1059     ld de,#acc
+      000366 CD 47 02         [17] 1060     call mul_reg2_by_reg1
+      000369 C9               [10] 1061     ret
+                                   1062 
+                                   1063 ;///////////////////////////////////////////////////////////////////////////////
+                                   1064 ;   mul_reg_10
+                                   1065 ;   void mul_reg_10(uint8_t *reg);
+                                   1066 ;   Parameters:
+                                   1067 ;     DE: reg
+                                   1068 ;   Returns: Nothing
+                                   1069 ;   Affects: BC DE HL AF IY BC' DE' HL' AF'
+      00036A                       1070 mul_reg_10:
+                                   1071 
+      00036A DD E5            [15] 1072     push ix
+      00036C DD 21 F1 FF      [14] 1073     ld ix,#(0xFFF8-NBYTES)    ; Allocates 8 bytes + buffer
+      000370 DD 39            [15] 1074     add ix,sp
+      000372 DD F9            [10] 1075     ld sp,ix
+                                   1076 
+      000374 DD 73 00         [19] 1077     ld (ix),e
+      000377 DD 72 01         [19] 1078     ld 1(ix),d         ; IX+0, IX+1: reg
+                                   1079 
+                                   1080 ;    uint8_t regmdiv[NBYTES];
+      00037A DD                    1081     .db 0xdd
+      00037B 4D               [ 4] 1082     ld c,l
+      00037C DD                    1083     .db 0xdd
+      00037D 44               [ 4] 1084     ld b,h            ; Copy IX -> BC
+      00037E 21 08 00         [10] 1085     ld HL,#8
+      000381 09               [11] 1086     add hl,bc
+      000382 DD 75 04         [19] 1087     ld 4(ix),l
+      000385 DD 74 05         [19] 1088     ld 5(ix),h         ; IX+4, IX+5: regmdiv
+                                   1089 
+                                   1090 ;    memcpy(regmdiv, reg, NBYTES);
+      000388 DD 5E 04         [19] 1091     ld e,4(ix)
+      00038B DD 56 05         [19] 1092     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      00038E DD 6E 00         [19] 1093     ld l,(ix)
+      000391 DD 66 01         [19] 1094     ld h,1(ix)         ; IX+0, IX+1: reg
+      000394 01 07 00         [10] 1095     ld bc,#NBYTES
+      000397 ED B0            [21] 1096     ldir
+                                   1097 
+                                   1098 ;    shl_reg(reg, 1);
+      000399 DD 5E 00         [19] 1099     ld e,(ix)
+      00039C DD 56 01         [19] 1100     ld d,1(ix)         ; IX+0, IX+1: reg
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 21.
+Hexadecimal [24-Bits]
+
+
+
+      00039F 01 01 00         [10] 1101     ld bc,#1
+      0003A2 CD C8 00         [17] 1102     call shl_reg
+                                   1103 
+                                   1104 ;    shl_reg(regmdiv, 3);
+      0003A5 DD 5E 04         [19] 1105     ld e,4(ix)
+      0003A8 DD 56 05         [19] 1106     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      0003AB 01 03 00         [10] 1107     ld bc,#3
+      0003AE CD C8 00         [17] 1108     call shl_reg
+                                   1109 
+                                   1110 ;    add_reg2_to_reg1(reg,regmdiv);
+      0003B1 DD 5E 00         [19] 1111     ld e,(ix)
+      0003B4 DD 56 01         [19] 1112     ld d,1(ix)         ; IX+0, IX+1: reg
+      0003B7 DD 6E 04         [19] 1113     ld l,4(ix)
+      0003BA DD 66 05         [19] 1114     ld h,5(ix)         ; IX+4, IX+5: regmdiv
+      0003BD CD 51 00         [17] 1115     call add_reg2_to_reg1
+                                   1116 
+      0003C0 21 0F 00         [10] 1117     ld hl,#(0x0008+NBYTES)    ; Frees 8 bytes + buffer
+      0003C3 39               [11] 1118     add hl,sp
+      0003C4 F9               [ 6] 1119     ld sp,hl
+      0003C5 DD E1            [14] 1120     pop ix
+      0003C7 C9               [10] 1121     ret
+                                   1122 
+                                   1123 ;///////////////////////////////////////////////////////////////////////////////
+                                   1124 ;   compare
+                                   1125 ;   int compare (const uint8_t *reg1, const uint8_t *reg2);
+                                   1126 ;   Parameters:
+                                   1127 ;     HL: reg1
+                                   1128 ;     DE: reg2
+                                   1129 ;   Returns: Flags: Z:        reg1 = reg2
+                                   1130 ;                   NZ & C:   reg1 < reg2
+                                   1131 ;                   NC & NC:  reg1 > reg2
+                                   1132 ;   Affects: BC DE HL AF
+      0003C8                       1133 compare:
+                                   1134 
+                                   1135 ;    for (int i = 0; i < NBYTES; i++){
+      0003C8 01 07 00         [10] 1136     ld bc,#NBYTES
+                                   1137 
+      0003CB                       1138 compare_1:
+                                   1139 
+                                   1140 ;        if (reg1[i] < reg2[i]) return -1;   // reg1 < reg2
+                                   1141 ;        if (reg1[i] > reg2[i]) return 1;    // reg1 > reg2
+                                   1142 ;    }
+                                   1143 
+      0003CB 1A               [ 7] 1144     ld a,(de)
+      0003CC ED A1            [16] 1145     cpi
+      0003CE 20 06            [12] 1146     jr nz,compare_2
+      0003D0 13               [ 6] 1147     inc de
+      0003D1 EA CB 03         [10] 1148     jp pe,compare_1
+                                   1149 
+                                   1150 ;    return 0;   // Same value
+      0003D4 AF               [ 4] 1151     xor a
+      0003D5 C9               [10] 1152     ret
+                                   1153 
+      0003D6                       1154 compare_2:
+      0003D6 2B               [ 6] 1155     dec hl
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 22.
+Hexadecimal [24-Bits]
+
+
+
+      0003D7 BE               [ 7] 1156     cp (hl)
+      0003D8 3F               [ 4] 1157     ccf
+      0003D9 C9               [10] 1158     ret
+                                   1159 
+                                   1160 ;///////////////////////////////////////////////////////////////////////////////
+                                   1161 ;   iszero
+                                   1162 ;   int iszero (const uint8_t *reg);
+                                   1163 ;   Parameters:
+                                   1164 ;     HL: reg
+                                   1165 ;   Returns: Flags: Z:        reg = 0
+                                   1166 ;                   NZ:       reg1 != 0
+                                   1167 ;   Affects: BC DE HL AF
+      0003DA                       1168 iszero:
+                                   1169 
+                                   1170 ;    for (int i = 0; i < NBYTES; i++){
+      0003DA 01 07 00         [10] 1171     ld bc,#NBYTES
+      0003DD AF               [ 4] 1172     xor a
+                                   1173 
+      0003DE                       1174 iszero_1:
+                                   1175 
+                                   1176 ;        if (reg[i]) return 0;   // nonzero
+      0003DE ED A1            [16] 1177     cpi
+      0003E0 C0               [11] 1178     ret nz
+                                   1179 
+                                   1180 ;    }
+      0003E1 EA DE 03         [10] 1181     jp pe,iszero_1
+                                   1182 
+                                   1183 ;    return 1;   // Is zero
+      0003E4 AF               [ 4] 1184     xor a
+      0003E5 C9               [10] 1185     ret
+                                   1186 
+                                   1187 ;///////////////////////////////////////////////////////////////////////////////
+                                   1188 ;   div_reg2_by_reg1
+                                   1189 ;   int div_reg2_by_reg1(const uint8_t *reg1, uint8_t *reg2);
+                                   1190 ;   Parameters:
+                                   1191 ;     HL: reg1
+                                   1192 ;     DE: reg2
+                                   1193 ;   Returns: Flags: Z:        Div OK
+                                   1194 ;                   NZ:       Div Error
+                                   1195 ;   Affects: BC DE HL AF IY BC' DE' HL' AF'
+      0003E6                       1196 div_reg2_by_reg1:
+                                   1197 
+      0003E6 DD E5            [15] 1198     push ix
+      0003E8 DD 21 E1 FF      [14] 1199     ld ix,#(0xFFF6-3*NBYTES)    ; Allocates 10 bytes + 3 buffers
+      0003EC DD 39            [15] 1200     add ix,sp
+      0003EE DD F9            [10] 1201     ld sp,ix
+                                   1202 
+      0003F0 DD 75 00         [19] 1203     ld (ix),l
+      0003F3 DD 74 01         [19] 1204     ld 1(ix),h         ; IX+0, IX+1: reg1
+      0003F6 DD 73 02         [19] 1205     ld 2(ix),e
+      0003F9 DD 72 03         [19] 1206     ld 3(ix),d         ; IX+2, IX+3: reg2
+                                   1207 
+                                   1208 ;    uint8_t regmdiv[NBYTES];
+      0003FC DD                    1209     .db 0xdd
+      0003FD 4D               [ 4] 1210     ld c,l
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 23.
+Hexadecimal [24-Bits]
+
+
+
+      0003FE DD                    1211     .db 0xdd
+      0003FF 44               [ 4] 1212     ld b,h            ; Copia IX em BC
+      000400 21 0A 00         [10] 1213     ld HL,#10
+      000403 09               [11] 1214     add hl,bc
+      000404 DD 75 04         [19] 1215     ld 4(ix),l
+      000407 DD 74 05         [19] 1216     ld 5(ix),h         ; IX+4, IX+5: regmdiv
+                                   1217 
+                                   1218 ;    uint8_t regmdiv2[NBYTES];
+      00040A 01 07 00         [10] 1219     ld bc,#NBYTES
+      00040D 09               [11] 1220     add hl,bc
+      00040E DD 75 06         [19] 1221     ld 6(ix),l
+      000411 DD 74 07         [19] 1222     ld 7(ix),h         ; IX+6, IX+7: regmdiv2
+                                   1223 
+                                   1224 ;    if (iszero(reg1)) return -1; // Divide by zero
+      000414 DD 6E 00         [19] 1225     ld l,(ix)
+      000417 DD 66 01         [19] 1226     ld h,1(ix)         ; IX+0, IX+1: reg
+      00041A CD DA 03         [17] 1227     call iszero
+      00041D 20 05            [12] 1228     jr nz, div_reg2_by_reg1_1
+      00041F 3E FF            [ 7] 1229     ld a,#0xff
+      000421 C3 B5 05         [10] 1230     jp div_reg2_by_reg1_end
+                                   1231 
+      000424                       1232 div_reg2_by_reg1_1:
+                                   1233 
+                                   1234 ;    int res = compare (reg2, reg1);
+                                   1235 ;    if (res == 0){   // iguais
+                                   1236 ;        zero_reg(reg2);
+                                   1237 ;        set_bit_reg_int(reg2, 0);    //1
+                                   1238 ;        return 0;   //ok
+                                   1239 ;    }
+      000424 DD 6E 00         [19] 1240     ld l,(ix)
+      000427 DD 66 01         [19] 1241     ld h,1(ix)         ; IX+0, IX+1: reg1
+      00042A DD 5E 02         [19] 1242     ld e,2(ix)
+      00042D DD 56 03         [19] 1243     ld d,3(ix)         ; IX+2, IX+3: reg2
+      000430 CD C8 03         [17] 1244     call compare
+      000433 20 19            [12] 1245     jr nz, div_reg2_by_reg1_2
+                                   1246 
+      000435 DD 6E 02         [19] 1247     ld l,2(ix)
+      000438 DD 66 03         [19] 1248     ld h,3(ix)         ; IX+2, IX+3: reg2
+      00043B CD 16 00         [17] 1249     call zero_reg
+      00043E DD 6E 02         [19] 1250     ld l,2(ix)
+      000441 DD 66 03         [19] 1251     ld h,3(ix)         ; IX+2, IX+3: reg2
+      000444 01 00 00         [10] 1252     ld bc,#0
+      000447 CD 4B 00         [17] 1253     call set_bit_reg_int
+      00044A AF               [ 4] 1254     xor a
+      00044B C3 B5 05         [10] 1255     jp div_reg2_by_reg1_end
+                                   1256 
+      00044E                       1257 div_reg2_by_reg1_2:
+                                   1258 
+                                   1259 ;    uint8_t regquot[NBYTES];
+      00044E 01 07 00         [10] 1260     ld bc,#NBYTES
+      000451 DD 6E 06         [19] 1261     ld l,6(ix)
+      000454 DD 66 07         [19] 1262     ld h,7(ix)         ; IX+6, IX+7: regmdiv2
+      000457 09               [11] 1263     add hl,bc
+      000458 DD 75 08         [19] 1264     ld 8(ix),l
+      00045B DD 74 09         [19] 1265     ld 9(ix),h         ; IX+8, IX+9: regquot
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 24.
+Hexadecimal [24-Bits]
+
+
+
+                                   1266 
+                                   1267 ;    zero_reg(regquot);
+                                   1268     ;ld l,8(ix)
+                                   1269     ;ld h,9(ix)         ; IX+8, IX+9: regquot
+      00045E CD 16 00         [17] 1270     call zero_reg
+                                   1271 
+                                   1272 ;    memcpy(regmdiv, reg1, NBYTES);
+      000461 DD 5E 04         [19] 1273     ld e,4(ix)
+      000464 DD 56 05         [19] 1274     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      000467 DD 6E 00         [19] 1275     ld l,(ix)
+      00046A DD 66 01         [19] 1276     ld h,1(ix)         ; IX+0, IX+1: reg1
+      00046D 01 07 00         [10] 1277     ld bc,#NBYTES
+      000470 ED B0            [21] 1278     ldir
+                                   1279 
+                                   1280 ;    memcpy(regmdiv2, reg1, NBYTES);
+      000472 DD 5E 06         [19] 1281     ld e,6(ix)
+      000475 DD 56 07         [19] 1282     ld d,7(ix)         ; IX+6, IX+7: regmdiv2
+      000478 DD 6E 00         [19] 1283     ld l,(ix)
+      00047B DD 66 01         [19] 1284     ld h,1(ix)         ; IX+0, IX+1: reg1
+      00047E 01 07 00         [10] 1285     ld bc,#NBYTES
+      000481 ED B0            [21] 1286     ldir
+                                   1287 
+                                   1288 ;    for (;!iszero(reg2);){
+      000483                       1289 div_reg2_by_reg1_3:
+                                   1290 
+      000483 DD 6E 02         [19] 1291     ld l,2(ix)
+      000486 DD 66 03         [19] 1292     ld h,3(ix)         ; IX+2, IX+3: reg2
+      000489 CD DA 03         [17] 1293     call iszero
+      00048C CA A3 05         [10] 1294     jp z, div_reg2_by_reg1_5
+                                   1295 
+                                   1296 ;        int res = compare (reg2, regmdiv);
+      00048F DD 6E 02         [19] 1297     ld l,2(ix)
+      000492 DD 66 03         [19] 1298     ld h,3(ix)         ; IX+2, IX+3: reg2
+      000495 DD 5E 04         [19] 1299     ld e,4(ix)
+      000498 DD 56 05         [19] 1300     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      00049B CD C8 03         [17] 1301     call compare
+                                   1302 
+                                   1303 ;        if (res == -1){ // reg2 < regmdiv
+      00049E D2 1F 05         [10] 1304     jp nc, div_reg2_by_reg1_4
+      0004A1 CA 1F 05         [10] 1305     jp z, div_reg2_by_reg1_4
+                                   1306 
+                                   1307 ;            int order = 0;
+      0004A4 FD 21 00 00      [14] 1308     ld iy,#0
+                                   1309 
+                                   1310 ;            for (;!iszero(reg2);){
+      0004A8                       1311 div_reg2_by_reg1_3a:
+                                   1312 
+      0004A8 DD 6E 02         [19] 1313     ld l,2(ix)
+      0004AB DD 66 03         [19] 1314     ld h,3(ix)         ; IX+2, IX+3: reg2
+      0004AE CD DA 03         [17] 1315     call iszero
+      0004B1 28 57            [12] 1316     jr z, div_reg2_by_reg1_3b
+                                   1317 
+                                   1318 ;                if (compare(reg2, regmdiv) < 0){ //reg2 < regmdiv
+                                   1319 
+      0004B3 DD 6E 02         [19] 1320     ld l,2(ix)
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 25.
+Hexadecimal [24-Bits]
+
+
+
+      0004B6 DD 66 03         [19] 1321     ld h,3(ix)         ; IX+2, IX+3: reg2
+      0004B9 DD 5E 04         [19] 1322     ld e,4(ix)
+      0004BC DD 56 05         [19] 1323     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      0004BF CD C8 03         [17] 1324     call compare
+      0004C2 30 1F            [12] 1325     jr nc, div_reg2_by_reg1_3c
+      0004C4 28 1D            [12] 1326     jr z, div_reg2_by_reg1_3c
+                                   1327 
+                                   1328 ;                    shr_reg(regmdiv, 1);
+      0004C6 DD 5E 04         [19] 1329     ld e,4(ix)
+      0004C9 DD 56 05         [19] 1330     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      0004CC 01 01 00         [10] 1331     ld bc,#1
+      0004CF CD 84 01         [17] 1332     call shr_reg
+                                   1333 
+                                   1334 ;                    order++;
+      0004D2 FD 23            [10] 1335     inc iy
+                                   1336 ;                    if (order >= NBITS_FRAC){
+                                   1337 ;                        memcpy(reg2, regquot, NBYTES);
+                                   1338 ;                        return 0;
+                                   1339 ;                    }
+      0004D4 FD                    1340     .db 0xfd
+      0004D5 54               [ 4] 1341     ld d,h
+      0004D6 FD                    1342     .db 0xfd
+      0004D7 5D               [ 4] 1343     ld e,l
+      0004D8 EB               [ 4] 1344     ex de,hl
+      0004D9 11 28 00         [10] 1345     ld de,#NBITS_FRAC
+      0004DC AF               [ 4] 1346     xor a
+      0004DD ED 52            [15] 1347     sbc hl,de
+      0004DF 30 29            [12] 1348     jr nc, div_reg2_by_reg1_3b
+                                   1349 
+                                   1350 ;                   continue;
+      0004E1 18 C5            [12] 1351     jr div_reg2_by_reg1_3a
+                                   1352 ;                }
+                                   1353 
+      0004E3                       1354 div_reg2_by_reg1_3c:
+                                   1355 
+                                   1356 ;                sub_reg2_from_reg1(reg2, regmdiv);
+      0004E3 DD 6E 04         [19] 1357     ld l,4(ix)
+      0004E6 DD 66 05         [19] 1358     ld h,5(ix)         ; IX+0, IX+1: regmdiv
+      0004E9 DD 5E 02         [19] 1359     ld e,2(ix)
+      0004EC DD 56 03         [19] 1360     ld d,3(ix)         ; IX+2, IX+3: reg2
+      0004EF CD A3 00         [17] 1361     call sub_reg2_from_reg1
+                                   1362 
+                                   1363 ;                set_bit_reg(regquot, NBITS_FRAC - order);
+      0004F2 21 28 00         [10] 1364     ld hl,#NBITS_FRAC
+      0004F5 FD                    1365     .db 0xfd
+      0004F6 4D               [ 4] 1366     ld c,l
+      0004F7 FD                    1367     .db 0xfd
+      0004F8 44               [ 4] 1368     ld b,h
+      0004F9 AF               [ 4] 1369     xor a
+      0004FA ED 42            [15] 1370     sbc hl,bc
+      0004FC 4D               [ 4] 1371     ld c,l
+      0004FD 44               [ 4] 1372     ld b,h
+      0004FE DD 6E 08         [19] 1373     ld l,8(ix)
+      000501 DD 66 09         [19] 1374     ld h,9(ix)         ; IX+8, IX+9: regquot
+      000504 CD 21 00         [17] 1375     call set_bit_reg
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 26.
+Hexadecimal [24-Bits]
+
+
+
+                                   1376 
+                                   1377 ;            }
+      000507 C3 A8 04         [10] 1378     jp div_reg2_by_reg1_3a
+                                   1379 
+      00050A                       1380 div_reg2_by_reg1_3b:
+                                   1381 
+                                   1382 ;            memcpy(reg2, regquot, NBYTES);
+      00050A DD 5E 02         [19] 1383     ld e,2(ix)
+      00050D DD 56 03         [19] 1384     ld d,3(ix)         ; IX+2, IX+3: reg2
+      000510 DD 6E 08         [19] 1385     ld l,8(ix)
+      000513 DD 66 09         [19] 1386     ld h,9(ix)         ; IX+8, IX+9: regquot
+      000516 01 07 00         [10] 1387     ld bc,#NBYTES
+      000519 ED B0            [21] 1388     ldir
+                                   1389 
+                                   1390 ;            return 0;
+      00051B AF               [ 4] 1391     xor a
+      00051C C3 B5 05         [10] 1392     jp div_reg2_by_reg1_end
+                                   1393 
+                                   1394 ;        }
+                                   1395 ;        else{   // reg2 >= regmdiv
+                                   1396 
+      00051F                       1397 div_reg2_by_reg1_4:
+                                   1398 
+                                   1399 ;            int order = 0;
+      00051F FD 21 00 00      [14] 1400     ld iy,#0
+                                   1401 
+                                   1402 ;            for (;;){
+      000523                       1403 div_reg2_by_reg1_4a:
+                                   1404 
+                                   1405 ;                if (compare(reg2, regmdiv) < 0){ //reg2 < regmdiv
+                                   1406 ;                    break;
+                                   1407 ;                }
+      000523 DD 6E 02         [19] 1408     ld l,2(ix)
+      000526 DD 66 03         [19] 1409     ld h,3(ix)         ; IX+2, IX+3: reg2
+      000529 DD 5E 04         [19] 1410     ld e,4(ix)
+      00052C DD 56 05         [19] 1411     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      00052F CD C8 03         [17] 1412     call compare
+      000532 38 21            [12] 1413     jr c, div_reg2_by_reg1_4b
+                                   1414 
+                                   1415 ;                shl_reg(regmdiv, 1);
+      000534 01 01 00         [10] 1416     ld bc,#1
+      000537 DD 5E 04         [19] 1417     ld e,4(ix)
+      00053A DD 56 05         [19] 1418     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      00053D CD C8 00         [17] 1419     call shl_reg
+                                   1420 
+                                   1421 ;                if (compare(reg2, regmdiv) < 0){ //reg2 < regmdiv
+                                   1422 ;                    break;
+                                   1423 ;                }
+      000540 DD 6E 02         [19] 1424     ld l,2(ix)
+      000543 DD 66 03         [19] 1425     ld h,3(ix)         ; IX+2, IX+3: reg2
+      000546 DD 5E 04         [19] 1426     ld e,4(ix)
+      000549 DD 56 05         [19] 1427     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      00054C CD C8 03         [17] 1428     call compare
+      00054F 38 04            [12] 1429     jr c, div_reg2_by_reg1_4b
+                                   1430 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 27.
+Hexadecimal [24-Bits]
+
+
+
+                                   1431 ;                order++;
+      000551 FD 23            [10] 1432     inc iy
+                                   1433 
+                                   1434 ;            }
+      000553 18 CE            [12] 1435     jr div_reg2_by_reg1_4a
+                                   1436 
+      000555                       1437 div_reg2_by_reg1_4b:
+                                   1438 
+                                   1439 ;            memcpy(regmdiv, regmdiv2, NBYTES);
+      000555 DD 5E 04         [19] 1440     ld e,4(ix)
+      000558 DD 56 05         [19] 1441     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      00055B DD 6E 06         [19] 1442     ld l,6(ix)
+      00055E DD 66 07         [19] 1443     ld h,7(ix)         ; IX+6, IX+7: regmdiv2
+      000561 01 07 00         [10] 1444     ld bc,#NBYTES
+      000564 ED B0            [21] 1445     ldir
+                                   1446 
+                                   1447 ;            shl_reg(regmdiv, order);
+      000566 FD                    1448     .db 0xfd
+      000567 4D               [ 4] 1449     ld c,l
+      000568 FD                    1450     .db 0xfd
+      000569 44               [ 4] 1451     ld b,h
+      00056A DD 5E 04         [19] 1452     ld e,4(ix)
+      00056D DD 56 05         [19] 1453     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      000570 CD C8 00         [17] 1454     call shl_reg
+                                   1455 
+                                   1456 ;            sub_reg2_from_reg1(reg2, regmdiv);
+      000573 DD 5E 02         [19] 1457     ld e,2(ix)
+      000576 DD 56 03         [19] 1458     ld d,3(ix)         ; IX+2, IX+3: reg2
+      000579 DD 6E 04         [19] 1459     ld l,4(ix)
+      00057C DD 66 05         [19] 1460     ld h,5(ix)         ; IX+4, IX+5: regmdiv
+      00057F CD A3 00         [17] 1461     call sub_reg2_from_reg1
+                                   1462 
+                                   1463 ;            set_bit_reg_int(regquot, order);
+      000582 DD 6E 08         [19] 1464     ld l,8(ix)
+      000585 DD 66 09         [19] 1465     ld h,9(ix)         ; IX+8, IX+9: regquot
+      000588 FD                    1466     .db 0xfd
+      000589 4D               [ 4] 1467     ld c,l
+      00058A FD                    1468     .db 0xfd
+      00058B 44               [ 4] 1469     ld b,h
+      00058C CD 4B 00         [17] 1470     call set_bit_reg_int
+                                   1471 
+                                   1472 ;            memcpy(regmdiv, regmdiv2, NBYTES);
+      00058F DD 5E 04         [19] 1473     ld e,4(ix)
+      000592 DD 56 05         [19] 1474     ld d,5(ix)         ; IX+4, IX+5: regmdiv
+      000595 DD 6E 06         [19] 1475     ld l,6(ix)
+      000598 DD 66 07         [19] 1476     ld h,7(ix)         ; IX+6, IX+7: regmdiv2
+      00059B 01 07 00         [10] 1477     ld bc,#NBYTES
+      00059E ED B0            [21] 1478     ldir
+                                   1479 
+                                   1480 ;        }
+                                   1481 ;    }
+      0005A0 C3 83 04         [10] 1482     jp div_reg2_by_reg1_3
+                                   1483 
+      0005A3                       1484 div_reg2_by_reg1_5:
+                                   1485 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 28.
+Hexadecimal [24-Bits]
+
+
+
+                                   1486 ;    memcpy(reg2, regquot, NBYTES);
+      0005A3 DD 5E 02         [19] 1487     ld e,2(ix)
+      0005A6 DD 56 03         [19] 1488     ld d,3(ix)         ; IX+2, IX+3: reg2
+      0005A9 DD 6E 08         [19] 1489     ld l,8(ix)
+      0005AC DD 66 09         [19] 1490     ld h,9(ix)         ; IX+8, IX+9: regquot
+      0005AF 01 07 00         [10] 1491     ld bc,#NBYTES
+      0005B2 ED B0            [21] 1492     ldir
+                                   1493 
+                                   1494 ;    return 0;
+      0005B4 AF               [ 4] 1495     xor a
+                                   1496 
+      0005B5                       1497 div_reg2_by_reg1_end:
+                                   1498 
+      0005B5 21 1F 00         [10] 1499     ld hl,#(0x000A+3*NBYTES)    ; Frees 10 bytes + 3 buffers
+      0005B8 39               [11] 1500     add hl,sp
+      0005B9 F9               [ 6] 1501     ld sp,hl
+      0005BA DD E1            [14] 1502     pop ix
+      0005BC B7               [ 4] 1503     or a
+      0005BD C9               [10] 1504     ret
+                                   1505 
+                                   1506 ;///////////////////////////////////////////////////////////////////////////////
+                                   1507 ;   div_acc_by_reg
+                                   1508 ;   int div_acc_by_reg(const uint8_t *reg)
+                                   1509 ;   Parameters:
+                                   1510 ;     HL: reg
+                                   1511 ;   Returns: Flags: Z:        Div OK
+                                   1512 ;                   NZ:       Div Error
+                                   1513 ;   Affects: BC DE HL AF IY BC' DE' HL' AF'
+      0005BE                       1514 div_acc_by_reg:
+                                   1515 
+                                   1516     ;return div_reg2_by_reg1(reg, acc);
+      0005BE 11 43 09         [10] 1517     ld de,#acc
+      0005C1 C3 E6 03         [10] 1518     jp div_reg2_by_reg1
+                                   1519 
+                                   1520 ;///////////////////////////////////////////////////////////////////////////////
+                                   1521 ;   print_int_part
+                                   1522 ;   void print_int_part(const uint8_t *reg);
+                                   1523 ;   Parameters:
+                                   1524 ;     HL: reg
+                                   1525 ;   Returns: Nothing
+                                   1526 ;   Affects: BC DE HL AF
+      0005C4                       1527 print_int_part_digit:
+                                   1528 
+      0005C4 1E 00            [ 7] 1529     ld e,#0
+      0005C6 AF               [ 4] 1530     xor a
+                                   1531 
+      0005C7                       1532 print_int_part_digit_0:
+                                   1533 
+      0005C7 ED 42            [15] 1534     sbc hl,bc
+      0005C9 28 08            [12] 1535     jr z,print_int_part_digit_2b
+      0005CB 38 03            [12] 1536     jr c,print_int_part_digit_2a
+      0005CD 1C               [ 4] 1537     inc e
+      0005CE 18 F7            [12] 1538     jr print_int_part_digit_0
+                                   1539 
+      0005D0                       1540 print_int_part_digit_2a:
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 29.
+Hexadecimal [24-Bits]
+
+
+
+      0005D0 09               [11] 1541     add hl,bc
+      0005D1 18 01            [12] 1542     jr print_int_part_digit_2
+                                   1543 
+      0005D3                       1544 print_int_part_digit_2b:
+      0005D3 1C               [ 4] 1545     inc e
+                                   1546 
+      0005D4                       1547 print_int_part_digit_2:
+                                   1548 
+      0005D4 7B               [ 4] 1549     ld a,e
+      0005D5 B7               [ 4] 1550     or a
+      0005D6 20 03            [12] 1551     jr nz,print_int_part_digit_3
+                                   1552 
+      0005D8 CB 42            [ 8] 1553     bit 0,d
+      0005DA C8               [11] 1554     ret z
+                                   1555 
+      0005DB                       1556 print_int_part_digit_3:
+                                   1557 
+      0005DB 16 01            [ 7] 1558     ld d,#1
+      0005DD C6 30            [ 7] 1559     add a,#'0'
+      0005DF CF               [11] 1560     rst 0x08
+      0005E0 C9               [10] 1561     ret
+                                   1562 
+      0005E1                       1563 print_int_part:
+                                   1564 
+      0005E1 46               [ 7] 1565     ld b,(hl)
+      0005E2 23               [ 6] 1566     inc hl
+      0005E3 4E               [ 7] 1567     ld c,(hl)
+      0005E4 69               [ 4] 1568     ld l,c
+      0005E5 60               [ 4] 1569     ld h,b
+                                   1570 
+      0005E6 16 00            [ 7] 1571     ld d,#0
+      0005E8 01 10 27         [10] 1572     ld bc,#10000
+      0005EB CD C4 05         [17] 1573     call print_int_part_digit
+      0005EE 01 E8 03         [10] 1574     ld bc,#1000
+      0005F1 CD C4 05         [17] 1575     call print_int_part_digit
+      0005F4 01 64 00         [10] 1576     ld bc,#100
+      0005F7 CD C4 05         [17] 1577     call print_int_part_digit
+      0005FA 01 0A 00         [10] 1578     ld bc,#10
+      0005FD CD C4 05         [17] 1579     call print_int_part_digit
+                                   1580     ;ld bc,#1
+                                   1581     ;call print_int_part_digit
+      000600 7D               [ 4] 1582     ld a,l
+      000601 C6 30            [ 7] 1583     add a,#'0'
+      000603 CF               [11] 1584     rst 0x08
+      000604 C9               [10] 1585     ret
+                                   1586 
+                                   1587 ;///////////////////////////////////////////////////////////////////////////////
+                                   1588 ;   print_bc
+                                   1589 ;   Internal function for debugging
+                                   1590 ;   Parameters:
+                                   1591 ;     BC: value to print
+                                   1592 ;   Returns: Nothing
+                                   1593 ;   Affects: BC DE HL AF
+      000605                       1594 print_bc:
+                                   1595 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 30.
+Hexadecimal [24-Bits]
+
+
+
+      000605 69               [ 4] 1596     ld l,c
+      000606 60               [ 4] 1597     ld h,b
+                                   1598 
+      000607 16 00            [ 7] 1599     ld d,#0
+      000609 01 10 27         [10] 1600     ld bc,#10000
+      00060C CD C4 05         [17] 1601     call print_int_part_digit
+      00060F 01 E8 03         [10] 1602     ld bc,#1000
+      000612 CD C4 05         [17] 1603     call print_int_part_digit
+      000615 01 64 00         [10] 1604     ld bc,#100
+      000618 CD C4 05         [17] 1605     call print_int_part_digit
+      00061B 01 0A 00         [10] 1606     ld bc,#10
+      00061E CD C4 05         [17] 1607     call print_int_part_digit
+      000621 7D               [ 4] 1608     ld a,l
+      000622 C6 30            [ 7] 1609     add a,#'0'
+      000624 CF               [11] 1610     rst 0x08
+      000625 C9               [10] 1611     ret
+                                   1612 
+                                   1613 ;///////////////////////////////////////////////////////////////////////////////
+                                   1614 ;   print_reg_decimal
+                                   1615 ;   void print_reg_decimal(const uint8_t *reg, int nplaces);
+                                   1616 ;   Parameters:
+                                   1617 ;     HL: reg
+                                   1618 ;     BC: nplaces
+                                   1619 ;   Returns: Nothing
+                                   1620 ;   Affects: BC DE HL AF
+      000626                       1621 print_reg_decimal:
+                                   1622 
+      000626 DD E5            [15] 1623     push ix
+      000628 DD 21 F1 FF      [14] 1624     ld ix,#(0xFFF8-NBYTES)    ; Allocates 8 bytes + buffer
+      00062C DD 39            [15] 1625     add ix,sp
+      00062E DD F9            [10] 1626     ld sp,ix
+      000630 DD 75 00         [19] 1627     ld (ix),l
+      000633 DD 74 01         [19] 1628     ld 1(ix),h         ; IX+0, IX+1: reg
+                                   1629 
+                                   1630     ;uint8_t regtmp[NBYTES];
+      000636 DD                    1631     .db 0xdd
+      000637 5D               [ 4] 1632     ld e,l
+      000638 DD                    1633     .db 0xdd
+      000639 54               [ 4] 1634     ld d,h            ; Copia IX em DE
+      00063A 21 08 00         [10] 1635     ld HL,#8
+      00063D 19               [11] 1636     add hl,de
+      00063E DD 75 02         [19] 1637     ld 2(ix),l
+      000641 DD 74 03         [19] 1638     ld 3(ix),h         ; IX+2, IX+3: regtmp
+                                   1639 
+                                   1640 ;    print_int_part(reg);
+                                   1641 ;    printf(".");
+      000644 DD 6E 00         [19] 1642     ld l,(ix)
+      000647 DD 66 01         [19] 1643     ld h,1(ix)         ; IX+0, IX+1: reg
+      00064A E5               [11] 1644     push hl
+      00064B C5               [11] 1645     push bc
+      00064C CD E1 05         [17] 1646     call print_int_part
+      00064F C1               [10] 1647     pop bc
+      000650 3E 2E            [ 7] 1648     ld a,#'.'
+      000652 CF               [11] 1649     rst 0x08
+      000653 E1               [10] 1650     pop hl
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 31.
+Hexadecimal [24-Bits]
+
+
+
+                                   1651 
+                                   1652 ;    memcpy(regtmp, reg, NBYTES);
+      000654 C5               [11] 1653     push bc
+                                   1654 
+      000655 DD 5E 02         [19] 1655     ld e,2(ix)
+      000658 DD 56 03         [19] 1656     ld d,3(ix)         ; IX+2, IX+3: regtmp
+      00065B 01 07 00         [10] 1657     ld bc,#NBYTES
+      00065E ED B0            [21] 1658     ldir
+                                   1659 
+      000660 C1               [10] 1660     pop bc
+                                   1661 
+      000661 DD 6E 02         [19] 1662     ld l,2(ix)
+      000664 DD 66 03         [19] 1663     ld h,3(ix)         ; IX+2, IX+3: regtmp
+                                   1664 
+                                   1665 ;    if (nplaces)
+                                   1666 ;        ++nplaces;
+      000667 78               [ 4] 1667     ld a,b
+      000668 B1               [ 4] 1668     or c
+      000669 28 01            [12] 1669     jr z, print_reg_decimal_1
+      00066B 03               [ 6] 1670     inc bc
+                                   1671 
+      00066C                       1672 print_reg_decimal_1:
+                                   1673 
+                                   1674 ;    for (;;){
+                                   1675 ;        if (nplaces){
+      00066C 78               [ 4] 1676     ld a,b
+      00066D B1               [ 4] 1677     or c
+      00066E 28 05            [12] 1678     jr z, print_reg_decimal_2
+                                   1679 
+                                   1680 ;            --nplaces;
+      000670 0B               [ 6] 1681     dec bc
+                                   1682 ;            if (!nplaces)
+                                   1683 ;                break;
+      000671 78               [ 4] 1684     ld a,b
+      000672 B1               [ 4] 1685     or c
+      000673 28 1F            [12] 1686     jr z, print_reg_decimal_3
+                                   1687 ;        }
+                                   1688 
+      000675                       1689 print_reg_decimal_2:
+                                   1690 
+                                   1691 ;        memset(regtmp,0,NBYTES_INT);
+      000675 AF               [ 4] 1692     xor a
+      000676 77               [ 7] 1693     ld (hl),a
+      000677 23               [ 6] 1694     inc hl
+      000678 77               [ 7] 1695     ld (hl),a
+      000679 2B               [ 6] 1696     dec hl
+                                   1697 
+                                   1698 ;        if (iszero(regtmp)) break;
+      00067A C5               [11] 1699     push bc
+      00067B E5               [11] 1700     push hl
+      00067C CD DA 03         [17] 1701     call iszero
+      00067F E1               [10] 1702     pop hl
+      000680 C1               [10] 1703     pop bc
+      000681 28 11            [12] 1704     jr z, print_reg_decimal_3
+                                   1705 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 32.
+Hexadecimal [24-Bits]
+
+
+
+                                   1706 ;        mul_reg_10(regtmp);
+      000683 C5               [11] 1707     push bc
+      000684 E5               [11] 1708     push hl
+      000685 5D               [ 4] 1709     ld e,l
+      000686 54               [ 4] 1710     ld d,h
+      000687 CD 6A 03         [17] 1711     call mul_reg_10
+      00068A E1               [10] 1712     pop hl
+      00068B C1               [10] 1713     pop bc
+                                   1714 
+                                   1715 ;        print_int_part(regtmp);
+      00068C 23               [ 6] 1716     inc hl
+      00068D 7E               [ 7] 1717     ld a,(hl)
+      00068E 2B               [ 6] 1718     dec hl
+      00068F C6 30            [ 7] 1719     add a,#'0'
+      000691 CF               [11] 1720     rst 0x08
+                                   1721 
+                                   1722 ;    }
+      000692 18 D8            [12] 1723     jr print_reg_decimal_1
+                                   1724 
+      000694                       1725 print_reg_decimal_3:
+      000694                       1726 print_reg_decimal_end:
+                                   1727 
+      000694 21 0F 00         [10] 1728     ld hl,#(0x0008+NBYTES)    ; Frees 8 bytes + buffer
+      000697 39               [11] 1729     add hl,sp
+      000698 F9               [ 6] 1730     ld sp,hl
+      000699 DD E1            [14] 1731     pop ix
+      00069B C9               [10] 1732     ret
+                                   1733 
+                                   1734 ;///////////////////////////////////////////////////////////////////////////////
+                                   1735 ;   println_reg_decimal
+                                   1736 ;   void println_reg_decimal(const uint8_t *reg, int nplaces);
+                                   1737 ;   Parameters:
+                                   1738 ;     HL: reg
+                                   1739 ;     BC: nplaces
+                                   1740 ;   Returns: Nothing
+                                   1741 ;   Affects: BC DE HL AF
+      00069C                       1742 println_reg_decimal:
+                                   1743 
+      00069C CD 26 06         [17] 1744     call print_reg_decimal
+      00069F CD 0F 00         [17] 1745     call print_crlf
+      0006A2 C9               [10] 1746     ret
+                                   1747 
+                                   1748 ;///////////////////////////////////////////////////////////////////////////////
+                                   1749 ;   test_pi_bbp
+                                   1750 ;   void test_pi_bbp(void); // Bailey-Borwein-Plouffe
+                                   1751 ;   Parameters: Nothing
+                                   1752 ;   Returns: Nothing
+                                   1753 ;   Affects: BC DE HL AF
+      0006A3                       1754 test_pi_bbp:
+                                   1755 
+      0006A3 DD E5            [15] 1756     push ix
+      0006A5 DD 21 E1 FF      [14] 1757     ld ix,#(0xFFF6-3*NBYTES)    ; Allocates 10 bytes + 3 buffers
+      0006A9 DD 39            [15] 1758     add ix,sp
+      0006AB DD F9            [10] 1759     ld sp,ix
+                                   1760 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 33.
+Hexadecimal [24-Bits]
+
+
+
+                                   1761 ;    uint8_t regtotal[NBYTES];
+      0006AD DD                    1762     .db 0xdd
+      0006AE 4D               [ 4] 1763     ld c,l
+      0006AF DD                    1764     .db 0xdd
+      0006B0 44               [ 4] 1765     ld b,h            ; IX -> BC
+      0006B1 21 0A 00         [10] 1766     ld HL,#10
+      0006B4 09               [11] 1767     add hl,bc
+      0006B5 DD 75 00         [19] 1768     ld (ix),l
+      0006B8 DD 74 01         [19] 1769     ld 1(ix),h         ; IX+0, IX+1: regtotal
+                                   1770 
+                                   1771 ;    uint8_t regsubtotal[NBYTES];
+      0006BB 01 07 00         [10] 1772     ld bc,#NBYTES
+      0006BE 09               [11] 1773     add hl,bc
+      0006BF DD 75 02         [19] 1774     ld 2(ix),l
+      0006C2 DD 74 03         [19] 1775     ld 3(ix),h         ; IX+2, IX+3: regsubtotal
+                                   1776 
+                                   1777 ;    uint8_t regden[NBYTES];
+                                   1778     ;ld bc,#NBYTES
+      0006C5 09               [11] 1779     add hl,bc
+      0006C6 DD 75 04         [19] 1780     ld 4(ix),l
+      0006C9 DD 74 05         [19] 1781     ld 5(ix),h         ; IX+4, IX+5: regden
+                                   1782 
+                                   1783 ;    zero_reg(regtotal);
+      0006CC DD 6E 00         [19] 1784     ld l,(ix)
+      0006CF DD 66 01         [19] 1785     ld h,1(ix)         ; IX+0, IX+1: regtotal
+      0006D2 CD 16 00         [17] 1786     call zero_reg
+                                   1787 
+                                   1788 ;    for (int k = 0; k < 10000; k++){
+      0006D5 01 00 00         [10] 1789     ld bc,#0
+                                   1790 
+      0006D8                       1791 test_pi_bbp_1:
+                                   1792 
+      0006D8 DD 71 06         [19] 1793     ld 6(ix),c
+      0006DB DD 70 07         [19] 1794     ld 7(ix),b         ; IX+6, IX+7: k
+                                   1795 
+      0006DE 78               [ 4] 1796     ld a,b
+      0006DF FE 00            [ 7] 1797     cp #(NUM_IT >> 8)
+      0006E1 38 08            [12] 1798     jr c, test_pi_bbp_1a
+                                   1799 
+      0006E3 79               [ 4] 1800     ld a,c
+      0006E4 FE 09            [ 7] 1801     cp #(NUM_IT & 0xff)
+      0006E6 38 03            [12] 1802     jr c, test_pi_bbp_1a
+                                   1803 
+      0006E8 C3 FB 07         [10] 1804     jp test_pi_bbp_2
+                                   1805 
+      0006EB                       1806 test_pi_bbp_1a:
+                                   1807 
+                                   1808 ;        zero_reg(regsubtotal);
+      0006EB DD 6E 02         [19] 1809     ld l,2(ix)
+      0006EE DD 66 03         [19] 1810     ld h,3(ix)         ; IX+2, IX+3: regsubtotal
+      0006F1 CD 16 00         [17] 1811     call zero_reg
+                                   1812 
+                                   1813 ;        zero_reg(regden);
+      0006F4 DD 6E 04         [19] 1814     ld l,4(ix)
+      0006F7 DD 66 05         [19] 1815     ld h,5(ix)         ; IX+4, IX+5: regden
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 34.
+Hexadecimal [24-Bits]
+
+
+
+      0006FA E5               [11] 1816     push hl
+      0006FB CD 16 00         [17] 1817     call zero_reg
+      0006FE D1               [10] 1818     pop de              ; DE has regden
+                                   1819 
+                                   1820 ;        load_reg_int(regden,8*k+1);     // Sets 8k+1
+      0006FF DD 6E 06         [19] 1821     ld l,6(ix)
+      000702 DD 66 07         [19] 1822     ld h,7(ix)         ; IX+6, IX+7: k
+      000705 CB 25            [ 8] 1823     sla l
+      000707 CB 14            [ 8] 1824     rl h
+      000709 CB 25            [ 8] 1825     sla l
+      00070B CB 14            [ 8] 1826     rl h
+      00070D CB 25            [ 8] 1827     sla l
+      00070F CB 14            [ 8] 1828     rl h
+      000711 23               [ 6] 1829     inc hl
+      000712 CD 8A 00         [17] 1830     call load_reg_int   ; DE is correct here
+                                   1831 
+                                   1832 ;        zero_reg(acc);
+      000715 21 43 09         [10] 1833     ld hl,#acc
+      000718 CD 16 00         [17] 1834     call zero_reg
+                                   1835 
+                                   1836 ;        set_bit_reg_int(acc, 2);        // Sets with 4
+      00071B 21 43 09         [10] 1837     ld hl,#acc
+      00071E 01 02 00         [10] 1838     ld bc,#2
+      000721 CD 4B 00         [17] 1839     call set_bit_reg_int
+                                   1840 
+                                   1841 ;        div_acc_by_reg(regden);
+      000724 DD 6E 04         [19] 1842     ld l,4(ix)
+      000727 DD 66 05         [19] 1843     ld h,5(ix)         ; IX+4, IX+5: regden
+      00072A CD BE 05         [17] 1844     call div_acc_by_reg
+                                   1845 
+                                   1846 ;        add_reg2_to_reg1(regsubtotal,acc);
+      00072D DD 5E 02         [19] 1847     ld e,2(ix)
+      000730 DD 56 03         [19] 1848     ld d,3(ix)         ; IX+2, IX+3: regsubtotal
+      000733 21 43 09         [10] 1849     ld hl,#acc
+      000736 CD 51 00         [17] 1850     call add_reg2_to_reg1
+                                   1851 
+                                   1852 ;        inc_reg_int8(regden, 3);        // 8k+4
+      000739 DD 5E 04         [19] 1853     ld e,4(ix)
+      00073C DD 56 05         [19] 1854     ld d,5(ix)         ; IX+4, IX+5: regden
+      00073F 3E 03            [ 7] 1855     ld a,#3
+      000741 CD 74 00         [17] 1856     call inc_reg_int8
+                                   1857 
+                                   1858 ;        zero_reg(acc);
+      000744 21 43 09         [10] 1859     ld hl,#acc
+      000747 CD 16 00         [17] 1860     call zero_reg
+                                   1861 
+                                   1862 ;        set_bit_reg_int(acc, 1);        // Sets with 2
+      00074A 21 43 09         [10] 1863     ld hl,#acc
+      00074D 01 01 00         [10] 1864     ld bc,#1
+      000750 CD 4B 00         [17] 1865     call set_bit_reg_int
+                                   1866 
+                                   1867 ;        div_acc_by_reg(regden);
+      000753 DD 6E 04         [19] 1868     ld l,4(ix)
+      000756 DD 66 05         [19] 1869     ld h,5(ix)         ; IX+4, IX+5: regden
+      000759 CD BE 05         [17] 1870     call div_acc_by_reg
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 35.
+Hexadecimal [24-Bits]
+
+
+
+                                   1871 
+                                   1872 ;        sub_reg2_from_reg1(regsubtotal,acc);
+      00075C 21 43 09         [10] 1873     ld hl,#acc
+      00075F DD 5E 02         [19] 1874     ld e,2(ix)
+      000762 DD 56 03         [19] 1875     ld d,3(ix)         ; IX+2, IX+3: regsubtotal
+      000765 CD A3 00         [17] 1876     call sub_reg2_from_reg1
+                                   1877 
+                                   1878 ;        inc_reg_int8(regden, 1);        // 8k+5
+      000768 DD 5E 04         [19] 1879     ld e,4(ix)
+      00076B DD 56 05         [19] 1880     ld d,5(ix)         ; IX+4, IX+5: regden
+      00076E 3E 01            [ 7] 1881     ld a,#1
+      000770 CD 74 00         [17] 1882     call inc_reg_int8
+                                   1883 
+                                   1884 ;        zero_reg(acc);
+      000773 21 43 09         [10] 1885     ld hl,#acc
+      000776 CD 16 00         [17] 1886     call zero_reg
+                                   1887 
+                                   1888 ;        set_bit_reg_int(acc, 0);        // Sets with 1
+      000779 21 43 09         [10] 1889     ld hl,#acc
+      00077C 01 00 00         [10] 1890     ld bc,#0
+      00077F CD 4B 00         [17] 1891     call set_bit_reg_int
+                                   1892 
+                                   1893 ;        div_acc_by_reg(regden);
+      000782 DD 6E 04         [19] 1894     ld l,4(ix)
+      000785 DD 66 05         [19] 1895     ld h,5(ix)         ; IX+4, IX+5: regden
+      000788 CD BE 05         [17] 1896     call div_acc_by_reg
+                                   1897 
+                                   1898 ;        sub_reg2_from_reg1(regsubtotal,acc);
+      00078B 21 43 09         [10] 1899     ld hl,#acc
+      00078E DD 5E 02         [19] 1900     ld e,2(ix)
+      000791 DD 56 03         [19] 1901     ld d,3(ix)         ; IX+2, IX+3: regsubtotal
+      000794 CD A3 00         [17] 1902     call sub_reg2_from_reg1
+                                   1903 
+                                   1904 ;        inc_reg_int8(regden, 1);        // 8k+6
+      000797 DD 5E 04         [19] 1905     ld e,4(ix)
+      00079A DD 56 05         [19] 1906     ld d,5(ix)         ; IX+4, IX+5: regden
+      00079D 3E 01            [ 7] 1907     ld a,#1
+      00079F CD 74 00         [17] 1908     call inc_reg_int8
+                                   1909 
+                                   1910 ;        zero_reg(acc);
+      0007A2 21 43 09         [10] 1911     ld hl,#acc
+      0007A5 CD 16 00         [17] 1912     call zero_reg
+                                   1913 
+                                   1914 ;        set_bit_reg_int(acc, 0);        // Sets with 1
+      0007A8 21 43 09         [10] 1915     ld hl,#acc
+      0007AB 01 00 00         [10] 1916     ld bc,#0
+      0007AE CD 4B 00         [17] 1917     call set_bit_reg_int
+                                   1918 
+                                   1919 ;        div_acc_by_reg(regden);
+      0007B1 DD 6E 04         [19] 1920     ld l,4(ix)
+      0007B4 DD 66 05         [19] 1921     ld h,5(ix)         ; IX+4, IX+5: regden
+      0007B7 CD BE 05         [17] 1922     call div_acc_by_reg
+                                   1923 
+                                   1924 ;        sub_reg2_from_reg1(regsubtotal,acc);
+      0007BA 21 43 09         [10] 1925     ld hl,#acc
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 36.
+Hexadecimal [24-Bits]
+
+
+
+      0007BD DD 5E 02         [19] 1926     ld e,2(ix)
+      0007C0 DD 56 03         [19] 1927     ld d,3(ix)         ; IX+2, IX+3: regsubtotal
+      0007C3 CD A3 00         [17] 1928     call sub_reg2_from_reg1
+                                   1929 
+                                   1930 ;        shr_reg(regsubtotal, 4*k);
+      0007C6 DD 5E 02         [19] 1931     ld e,2(ix)
+      0007C9 DD 56 03         [19] 1932     ld d,3(ix)         ; IX+2, IX+3: regsubtotal
+      0007CC DD 4E 06         [19] 1933     ld c,6(ix)
+      0007CF DD 46 07         [19] 1934     ld b,7(ix)         ; IX+6, IX+7: k
+      0007D2 CB 21            [ 8] 1935     sla c
+      0007D4 CB 10            [ 8] 1936     rl b
+      0007D6 CB 21            [ 8] 1937     sla c
+      0007D8 CB 10            [ 8] 1938     rl b
+      0007DA CD 84 01         [17] 1939     call shr_reg
+                                   1940 
+                                   1941 ;        add_reg2_to_reg1(regtotal, regsubtotal);
+      0007DD DD 5E 00         [19] 1942     ld e,(ix)
+      0007E0 DD 56 01         [19] 1943     ld d,1(ix)         ; IX+0, IX+1: regtotal
+      0007E3 DD 6E 02         [19] 1944     ld l,2(ix)
+      0007E6 DD 66 03         [19] 1945     ld h,3(ix)         ; IX+2, IX+3: regsubtotal
+      0007E9 CD 51 00         [17] 1946     call add_reg2_to_reg1
+                                   1947 
+                                   1948 ;;        if (!(k % 10)){
+                                   1949 ;;            printf("%5d: ",k);
+                                   1950 ;;            print_reg_decimal(regtotal, 120);
+                                   1951 ;;            int places_ok = compare_digits_to_pi(regtotal);
+                                   1952 ;;            printf(" (%d)\n",places_ok);
+                                   1953 ;;            if (places_ok >= 1000) return;
+                                   1954 ;;        }
+                                   1955 ;            print_reg_decimal(regtotal, 120);
+      0007EC CD 03 00         [17] 1956     call prints
+      0007EF 2A 00                 1957     .db "*",0
+                                   1958     ;ld l,(ix)
+                                   1959     ;ld h,1(ix)         ; IX+0, IX+1: regtotal
+                                   1960     ;ld bc,NUM_DECS
+                                   1961     ;call println_reg_decimal
+                                   1962 
+                                   1963 ;    }
+      0007F1 DD 4E 06         [19] 1964     ld c,6(ix)
+      0007F4 DD 46 07         [19] 1965     ld b,7(ix)         ; IX+6, IX+7: k
+      0007F7 03               [ 6] 1966     inc bc
+                                   1967     ;ld 6(ix),c
+                                   1968     ;ld 7(ix),b         ; IX+6, IX+7: k
+                                   1969 
+      0007F8 C3 D8 06         [10] 1970     jp test_pi_bbp_1
+                                   1971 
+      0007FB                       1972 test_pi_bbp_2:
+      0007FB                       1973 test_pi_bbp_end:
+                                   1974 
+                                   1975     ;call lcd_clear
+      0007FB CD 03 00         [17] 1976     call prints
+      0007FE 0D 0A 50 49 3A        1977     .ascii "\r\nPI:"
+      000803 00                    1978     .db 0
+      000804 DD 6E 00         [19] 1979     ld l,(ix)
+      000807 DD 66 01         [19] 1980     ld h,1(ix)         ; IX+0, IX+1: regtotal
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 37.
+Hexadecimal [24-Bits]
+
+
+
+      00080A 01 0B 00         [10] 1981     ld bc,#NUM_DECS
+                                   1982     ;call println_reg_decimal
+      00080D CD 26 06         [17] 1983     call print_reg_decimal
+                                   1984 
+      000810 21 1F 00         [10] 1985     ld hl,#(0x000A+3*NBYTES)    ; Frees 10 bytes + 3 buffers
+      000813 39               [11] 1986     add hl,sp
+      000814 F9               [ 6] 1987     ld sp,hl
+      000815 DD E1            [14] 1988     pop ix
+      000817 CD 03 00         [17] 1989     call prints
+      00081A 0D 0A 50 72 65 73 73  1990     .ascii "\r\nPress any key to exit...\r\n\0"
+             20 61 6E 79 20 6B 65
+             79 20 74 6F 20 65 78
+             69 74 2E 2E 2E 0D 0A
+             00
+      000837 D7               [11] 1991     rst 0x10
+      000838 C9               [10] 1992     ret
+                                   1993 
+                                   1994 ;///////////////////////////////////////////////////////////////////////////////
+                                   1995 ;   _main
+                                   1996 ;   void _main(void);
+                                   1997 ;   Parameters: Nothing
+                                   1998 ;   Returns: Nothing
+                                   1999 ;   Affects: BC DE HL AF IY BC' DE' HL' AF'
+      000839                       2000 _main:
+                                   2001 
+                                   2002     ;call lcd_begin    ;inicializa LCD no modo 4 bits		
+                                   2003     ;ld d,#2            ;carrega 2d em d 
+                                   2004     ;call dx100ms      ;aguarda 500ms 				
+                                   2005     ;ld b,#0x0C        ;desliga cursor e blink 
+                                   2006     ;call lcd_cmd      ;envia comando 
+                                   2007     ;call msg_init     ;escreve título "Alpha Z80" 
+                                   2008 
+      000839 CD A3 06         [17] 2009     call test_pi_bbp
+      00083C C9               [10] 2010     ret
+                                   2011 
+                                   2012 ; =============================================================================
+      00083D                       2013 lcd_home:
+      00083D C5               [11] 2014     push bc
+      00083E 06 02            [ 7] 2015     ld b,#0x02        ;return home
+      000840 CD 9B 08         [17] 2016     call lcd_cmd      ;envia 02h para o LCD
+      000843 F5               [11] 2017     push af
+      000844 AF               [ 4] 2018     xor a
+      000845 32 4A 09         [13] 2019     ld (dispcol),a
+      000848 F1               [10] 2020     pop af
+      000849 C1               [10] 2021     pop bc
+      00084A C9               [10] 2022     ret
+                                   2023 
+                                   2024 ; =============================================================================
+      00084B                       2025 lcd_home2:
+      00084B C5               [11] 2026     push bc
+      00084C 06 C0            [ 7] 2027     ld b,#0xC0        ;posiciona cursor na linha 1, coluna 0
+      00084E CD 9B 08         [17] 2028     call lcd_cmd      ;envia comando
+      000851 F5               [11] 2029     push af
+      000852 3E 10            [ 7] 2030     ld a,#16
+      000854 32 4A 09         [13] 2031     ld (dispcol),a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 38.
+Hexadecimal [24-Bits]
+
+
+
+      000857 F1               [10] 2032     pop af
+      000858 C1               [10] 2033     pop bc
+      000859 C9               [10] 2034     ret
+                                   2035 
+                                   2036 ; =============================================================================
+                                   2037 ; --- Inicializa LCD modo de 4 bits ---
+      00085A                       2038 lcd_begin:
+      00085A 16 32            [ 7] 2039     ld d,#50          ;carrega 50d em d 
+      00085C CD 1A 09         [17] 2040     call dx1ms        ;tempo para estabilização (50ms)
+      00085F 06 30            [ 7] 2041     ld b,#0x30        ;protocolo de inicialização
+      000861 0E 00            [ 7] 2042     ld c,#0x00        ;envio de comando
+      000863 CD CA 08         [17] 2043     call send_nibble  ;envia 30h para o LCD
+      000866 16 05            [ 7] 2044     ld d,#5           ;carrega 5d em d 
+      000868 CD 1A 09         [17] 2045     call dx1ms        ;aguarda 5ms (tempo superior ao datasheet)
+      00086B 06 30            [ 7] 2046     ld b,#0x30        ;protocolo de inicialização
+      00086D 0E 00            [ 7] 2047     ld c,#0x00        ;envio de comando
+      00086F CD CA 08         [17] 2048     call send_nibble  ;envia 30h para o LCD		
+      000872 CD 22 09         [17] 2049     call d1ms         ;aguarda 1ms (tempo superior ao datasheet)
+      000875 06 30            [ 7] 2050     ld b,#0x30        ;protocolo de inicialização
+      000877 0E 00            [ 7] 2051     ld c,#0x00        ;envio de comando
+      000879 CD CA 08         [17] 2052     call send_nibble  ;envia 30h para o LCD
+      00087C 06 20            [ 7] 2053     ld b,#0x20        ;LCD no modo 4 bits
+      00087E 0E 00            [ 7] 2054     ld c,#0x00        ;envio de comando
+      000880 CD CA 08         [17] 2055     call send_nibble  ;envia 30h para o LCD
+      000883 06 28            [ 7] 2056     ld b,#0x28        ;5x8 pontos por caractere, duas linhas
+      000885 CD 9B 08         [17] 2057     call lcd_cmd      ;envia comando 28h
+      000888 06 0F            [ 7] 2058     ld b,#0x0F        ;liga display, cursor e blink
+      00088A CD 9B 08         [17] 2059     call lcd_cmd      ;envia comando 0Fh
+      00088D 06 01            [ 7] 2060     ld b,#0x01        ;limpa LCD
+      00088F CD 9B 08         [17] 2061     call lcd_cmd      ;envia comando 01h
+      000892 06 06            [ 7] 2062     ld b,#0x06        ;modo de incremento de endereço para direita, movendo apenas o cursor 
+      000894 CD 9B 08         [17] 2063     call lcd_cmd      ;envia comando 06h
+      000897 CD 02 09         [17] 2064     call lcd_clear    ;limpa o display
+      00089A C9               [10] 2065     ret               ;retorno da sub-rotina
+                                   2066 
+                                   2067 ; =============================================================================
+                                   2068 ; --- Envia Comandos / Escreve no LCD ---
+      00089B                       2069 lcd_cmd:
+      00089B 0E 00            [ 7] 2070     ld c,#0x00
+      00089D 18 1C            [12] 2071     jr send_byte
+      00089F                       2072 lcd_write:
+                                   2073 
+      00089F 3A 4A 09         [13] 2074     ld a,(dispcol)
+      0008A2 FE 10            [ 7] 2075     cp #16
+      0008A4 20 05            [12] 2076     jr nz,lcd_w1
+      0008A6 CD 4B 08         [17] 2077     call lcd_home2
+      0008A9 18 07            [12] 2078     jr lcd_w2
+      0008AB                       2079 lcd_w1:
+      0008AB FE 20            [ 7] 2080     cp #32
+      0008AD 20 03            [12] 2081     jr nz,lcd_w2
+      0008AF CD 3D 08         [17] 2082     call lcd_home
+      0008B2                       2083 lcd_w2:
+      0008B2 3A 4A 09         [13] 2084     ld a,(dispcol)
+      0008B5 3C               [ 4] 2085     inc a
+      0008B6 32 4A 09         [13] 2086     ld (dispcol),a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 39.
+Hexadecimal [24-Bits]
+
+
+
+      0008B9 0E 01            [ 7] 2087     ld c,#0x01        ;01h para envio de caracteres
+      0008BB                       2088 send_byte:		
+      0008BB CD CA 08         [17] 2089     call send_nibble  ;envia nibble mais significativo
+      0008BE 78               [ 4] 2090     ld a,b            ;carrega conteúdo de b em acc
+      0008BF 17               [ 4] 2091     rla               ;rotaciona acc para esquerda 4x
+      0008C0 17               [ 4] 2092     rla               ;
+      0008C1 17               [ 4] 2093     rla               ;
+      0008C2 17               [ 4] 2094     rla               ;
+      0008C3 E6 F0            [ 7] 2095     and #0xF0         ;máscara para preservar nibble mais significativo
+      0008C5 47               [ 4] 2096     ld b,a            ;atualiza b
+      0008C6 CD CA 08         [17] 2097     call send_nibble  ;envia nibble menos significativo
+      0008C9 C9               [10] 2098     ret						;retorno da sub-rotina
+                                   2099 
+                                   2100 ;==============================================================================
+                                   2101 ; --- Envia cada nibble separadamente e gera pulso de enable ---
+      0008CA                       2102 send_nibble:
+      0008CA 3E 00            [ 7] 2103     ld a,#0x00        ;zera conteúdo de ACC
+      0008CC CB 41            [ 8] 2104     bit 0,c           ;bit 0 de c em LOW?
+      0008CE CA D3 08         [10] 2105     jp z,rs_clr       ;sim, desvia para manter RS limpo
+      0008D1 3E 01            [ 7] 2106     ld a,#0x00|RS     ;não, seta bit RS
+      0008D3                       2107 rs_clr:
+      0008D3 CB 78            [ 8] 2108     bit 7,b           ;bit7 de B em LOW?
+      0008D5 CA DA 08         [10] 2109     jp z,b6aval       ;sim, desvia para avaliar bit6
+      0008D8 CB FF            [ 8] 2110     set 7,a           ;não, seta bit 7 de acc
+      0008DA                       2111 b6aval:
+      0008DA CB 70            [ 8] 2112     bit 6,b           ;bit6 de B em LOW?
+      0008DC CA E1 08         [10] 2113     jp z,b5aval       ;sim, desvia para avaliar bit5
+      0008DF CB F7            [ 8] 2114     set 6,a           ;não, seta bit 6 de acc
+      0008E1                       2115 b5aval:
+      0008E1 CB 68            [ 8] 2116     bit 5,b           ;bit5 de B em LOW?
+      0008E3 CA E8 08         [10] 2117     jp z,b4aval       ;sim, desvia para avaliar bit4
+      0008E6 CB EF            [ 8] 2118     set 5,a           ;não, seta bit 5 de acc
+      0008E8                       2119 b4aval:
+      0008E8 CB 60            [ 8] 2120     bit 4,b           ;bit4 de B em LOW?
+      0008EA CA EF 08         [10] 2121     jp z,lcd_en       ;sim, desvia para pulso de enable
+      0008ED CB E7            [ 8] 2122     set 4,a           ;não, set bit 4 de acc
+      0008EF                       2123 lcd_en:
+      0008EF CB CF            [ 8] 2124     set EN,a          ;pino enable em HIGH
+      0008F1 D3 10            [11] 2125     out (PORTB),a     ;escreve no PORTB 
+      0008F3 16 02            [ 7] 2126     ld d,#2           ;carrega 2d em d 
+      0008F5 CD 1A 09         [17] 2127     call dx1ms        ;aguarda 2ms 
+      0008F8 CB 8F            [ 8] 2128     res EN,a          ;pino enable em LOW 
+      0008FA D3 10            [11] 2129     out (PORTB),a     ;escreve no PORTB 
+      0008FC 16 02            [ 7] 2130     ld d,#2           ;carrega 2d em d
+      0008FE CD 1A 09         [17] 2131     call dx1ms        ;aguarda 2ms 		
+      000901 C9               [10] 2132     ret               ;retorno da sub-rotina
+                                   2133 
+                                   2134 ; =============================================================================
+                                   2135 ; --- Limpa LCD ---
+      000902                       2136 lcd_clear:
+                                   2137     ;ld b,#0x02        ;return home
+                                   2138     ;call lcd_cmd      ;envia 02h para o LCD
+      000902 CD 3D 08         [17] 2139     call lcd_home
+      000905 06 01            [ 7] 2140     ld b,#0x01        ;limpa o display
+      000907 CD 9B 08         [17] 2141     call lcd_cmd      ;envia 01h para o LCD
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 40.
+Hexadecimal [24-Bits]
+
+
+
+      00090A C9               [10] 2142     ret               ;retorno da sub-rotina		
+                                   2143 
+                                   2144 ; =============================================================================
+                                   2145 ; --- Imprime o título na segunda linha do LCD ---
+      00090B                       2146 msg_init:
+                                   2147     ;ld b,#0xC0        ;posiciona cursor na linha 1, coluna 0
+                                   2148     ;call lcd_cmd      ;envia comando
+                                   2149     ;call lcd_home2
+      00090B CD 03 00         [17] 2150     call prints
+      00090E 50 49 43 41 4C 43 20  2151     .ascii "PICALC 1.0"
+             31 2E 30
+      000918 00                    2152     .db 0
+      000919 C9               [10] 2153     ret               ;retorna da sub-rotina 
+                                   2154 
+                                   2155 ; =============================================================================
+                                   2156 ; --- dx1ms multiplies 1ms delay ---	
+      00091A                       2157 dx1ms:				
+      00091A CD 22 09         [17] 2158     call d1ms         ; 1ms (delay time)
+      00091D 15               [ 4] 2159     dec d             ; 1.0µs    4 T States 
+      00091E C2 1A 09         [10] 2160     jp nz,dx1ms       ; 2.5µs   10 T States 		
+      000921 C9               [10] 2161     ret               ; 2.5µs   10 T States 
+                                   2162 
+                                   2163 ; =============================================================================
+                                   2164 ; --- aprox. 1ms delay (clock 4MHz) ---
+      000922                       2165 d1ms:                 ; 4.25µs  17 T States (call)
+      000922 C5               [11] 2166     push bc           ; 2.75µs  11 T States 
+      000923 06 DB            [ 7] 2167     ld b,#0xDB        ; 1.75 µs  7 T States 
+      000925                       2168 dloop:
+      000925 05               [ 4] 2169     dec b             ; 1.0µs    4 T States 
+      000926 00               [ 4] 2170     nop               ; 1.0µs    4 T States 
+      000927 C2 25 09         [10] 2171     jp nz,dloop       ; 2.5µs   10 T States 								
+      00092A C1               [10] 2172     pop bc            ; 2.5µs   10 T States 
+      00092B C9               [10] 2173     ret               ; 2.5µs   10 T States 
+                                   2174 
+                                   2175 ; =============================================================================
+                                   2176 ; --- dx100ms multiplies 100ms delay ---	
+      00092C                       2177 dx100ms: 
+      00092C CD 34 09         [17] 2178     call d100ms       ; 1ms (delay time)
+      00092F 15               [ 4] 2179     dec d             ; 1.0µs    4 T States 
+      000930 C2 2C 09         [10] 2180     jp nz,dx100ms     ; 2.5µs   10 T States 	
+      000933 C9               [10] 2181     ret						; 2.5µs   10 T States 
+                                   2182 		
+                                   2183 ; =============================================================================
+                                   2184 ; --- aprox. 100ms delay (clock 4MHz) ---
+      000934                       2185 d100ms:               ; 4.25µs  17 T States
+      000934 C5               [11] 2186     push bc           ; 2.75µs  11 T States 
+      000935 06 97            [ 7] 2187     ld b,#0x97        ; 1.75µs   7 T States 
+      000937                       2188 aux1:
+      000937 0E BD            [ 7] 2189     ld c,#0xBD        ; 1.75µs   7 T States 
+      000939                       2190 aux2:
+      000939 0D               [ 4] 2191     dec c             ; 1.0µs    4 T States 
+      00093A C2 39 09         [10] 2192     jp nz,aux2        ; 2.5µs   10 T States 
+      00093D 05               [ 4] 2193     dec b             ; 1.0µs    4 T States 
+      00093E C2 37 09         [10] 2194     jp nz,aux1        ; 2.5µs   10 T States 
+      000941 C1               [10] 2195     pop bc            ; 2.5µs   10 T States 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 41.
+Hexadecimal [24-Bits]
+
+
+
+      000942 C9               [10] 2196     ret               ; 2.5µs   10 T States 
+                                   2197 
+                                   2198 ;///////////////////////////////////////////////////////////////////////////////
+                                   2199 
+      000943                       2200 acc:    .ds NBYTES   ; Global variable, to make things a bit easier.
+      00094A                       2201 dispcol:.ds 1
+                                   2202 
+                                   2203     .area _DATA
+                                   2204 
+                                   2205 ;    .end
+                                   2206 

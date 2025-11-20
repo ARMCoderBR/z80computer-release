@@ -9,7 +9,7 @@ Example program for the KRAFT 80
 
 #include "io-kraft80.h"
 
-#pragma codeseg MAIN
+#pragma codeseg CODE
 
 ////////////////////////////////////////////////////////////////////////////////
 void main (void){

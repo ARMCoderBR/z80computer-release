@@ -28,7 +28,8 @@
 
 ;;;-----------------------------------------------------------------------
 ;;; INTERRUPT HANDLERS & VECTORS
-;;; HARDWARE DRIVERS FOR 8251/8259
+;;; HARDWARE DRIVERS FOR THE TANG NANO HARDWARE:
+;;;    VIDEO, SERIAL, TIMER & PS/2 KEYBOARD
 ;;;    BY ARMCODER - 2025
 ;;;-----------------------------------------------------------------------
 
@@ -164,6 +165,21 @@ PORTFPGASTATUS	.equ	0x5F
 	;//////////////////////////   ISR DISPATCH   ///////////////////////////
 	;///////////////////////////////////////////////////////////////////////
 	.org	0x38
+	jp	fpga_isr
+
+	;;;; END OF HEADER SECTION
+
+	.area	CODE
+
+signon:
+	.ascii	'\r\nKraft 80 - Z80 Computer - BIOS v'
+	.ascii	'1.0.2'
+	.ascii	'\r\n\0'
+
+msgk1:	.ascii	'Kraft 80\0'
+msgk2:	.ascii	'BIOS v'
+	.ascii	'1.0.2'
+	.ascii	'\0'
 
 fpga_isr:
 	push	af
@@ -290,9 +306,7 @@ rx_isr1a:
 
 rx_isr2:	
 	ld	(bufrxins),a
-
 	ret
-
 
 	;///////////////////////////////////////////////////////////////////////
 mon_putchar:
@@ -323,7 +337,6 @@ mon_haskey:
 	;////////////////////////   INITIALIZATION   ///////////////////////////
 	;///////////////////////////////////////////////////////////////////////
 
-.org	0x100
 init:
 	;; Stack at the top of memory.
 	ld	sp,#STACKTOP
@@ -414,14 +427,6 @@ wait1:	dec	hl
 	ei
 
 	jp	sysmon
-
-signon:
-	.db	13,10
-	.ascii	'Kraft 80 - Z80 Computer'
-	.db	13,10,0
-
-msgk1:	.ascii	"Kraft 80\0"
-msgk2:	.ascii	"Z80 Computer\0"
 
 	;///////////////////////////////////////////////////////////////////////
 prints:

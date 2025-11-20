@@ -1,0 +1,226 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+
+
+                                      1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                      2 ;
+                                      3 ;  INVADERS FOR KRAFT 80
+                                      4 ;  A mini game inspired on Taito's Space Invaders
+                                      5 ;  Rev 1.0
+                                      6 ;  14-Oct-2025 - ARMCoder
+                                      7 ;  Inputs module
+                                      8 ;
+                                      9 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                     10 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+
+
+                                     11 		.include "defines.h"
+                                      1 ;
+                                      2 ; KRAFT80 Defines
+                                      3 ;
+                                      4 
+                           004102     5 isr1vector	.equ	0x4102	;STACKTOP+2
+                           004104     6 isr2vector	.equ	0x4104	;STACKTOP+4
+                                      7 
+                           000000     8 PORTBUTTONS	.equ	0x00	
+                           000050     9 PORTDATA	.equ	0x50
+                           000051    10 PORTADDRL	.equ	0x51
+                           000052    11 PORTADDRH	.equ	0x52
+                           000053    12 PORTMODE	.equ	0x53
+                                     13 
+                                     14 ;   PS2 KEYBOARD
+                           000055    15 PORTKEY		.equ	0x55
+                                     16 
+                                     17 ;
+                                     18 ; Game Defines
+                                     19 ;
+                                     20 
+                           00000B    21 INVADER_COLS	.equ	11
+                           000005    22 INVADER_ROWS	.equ	5
+                           000037    23 INVADER_NUM	.equ	(INVADER_COLS*INVADER_ROWS)	
+                           000008    24 INVADERS_VSPACING .equ	8
+                                     25 
+                           0000E0    26 PLAYFIELD_WIDTH	.equ	224
+                                     27 
+                           000070    28 PLAY_WIDTH_BYTES .equ	(PLAYFIELD_WIDTH/2)
+                           00000C    29 VSTEP		.equ	12
+                           000008    30 VSTEP2		.equ	INVADERS_VSPACING
+                                     31 
+                           0000A0    32 BYTES_PER_LINE	.equ	160
+                                     33 
+                           000018    34 LEFT_OFFSET_BYTES .equ	(BYTES_PER_LINE - PLAY_WIDTH_BYTES)/2
+                                     35 
+                                     36 
+                           0000DC    37 CANNON_VPOS	.equ	220
+                           008998    38 CANNON_SCR_OFS	.equ	(BYTES_PER_LINE*CANNON_VPOS+LEFT_OFFSET_BYTES)
+                           008FD8    39 BLINE_SCR_OFS	.equ	(BYTES_PER_LINE*(10+CANNON_VPOS)+LEFT_OFFSET_BYTES)
+                                     40 
+                           007AA8    41 BUNKER1_SCR_OFS	.equ	(BYTES_PER_LINE*(CANNON_VPOS-24)+16+LEFT_OFFSET_BYTES)
+                           007ABF    42 BUNKER2_SCR_OFS	.equ	(BUNKER1_SCR_OFS+23)
+                           007AD6    43 BUNKER3_SCR_OFS	.equ	(BUNKER2_SCR_OFS+23)
+                           007AED    44 BUNKER4_SCR_OFS	.equ	(BUNKER3_SCR_OFS+23)
+                                     45 
+                           000226    46 INV_DIVIDER_INI	 .equ	550
+                           00000A    47 INV_DIVIDER_DROP .equ	10
+                                     48 
+                           000008    49 NUM_BOMBS	.equ	8
+                                     50 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 3.
+Hexadecimal [24-Bits]
+
+
+
+                                     12 
+                                     13 		.area	CODE
+                                     14 
+                                     15 		.globl	init_inputs, update_inputs
+                                     16 		
+                                     17 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                     18 
+      000000                         19 init_inputs:
+      000000 AF               [ 4]   20 		xor	a
+      000001 32 03 00         [13]   21 		ld	(kbd_state),a
+      000004 32 02 00         [13]   22 		ld	(portbuttons_kbd),a
+      000007 F3               [ 4]   23 		di
+      000008 2A 02 41         [16]   24 		ld	hl,(isr1vector)
+      00000B 22 00 00         [16]   25 		ld	(isr1vector_copy),hl
+      00000E 21 1F 00         [10]   26 		ld	hl,#ps2_isr
+      000011 22 02 41         [16]   27 		ld	(isr1vector),hl
+      000014 FB               [ 4]   28 		ei
+      000015 C9               [10]   29 		ret
+                                     30 
+                                     31 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                     32 
+      000016                         33 update_inputs:
+                                     34 		; return inputs in ACC as:
+                                     35 		; 76543210
+                                     36 		; R0L0000F
+                                     37 		; | |    +--FIRE  (1:pressed  0:not pressed)
+                                     38 		; | +-------LEFT  (1:pressed  0:not pressed)
+                                     39 		; +---------RIGHT (1:pressed  0:not pressed)
+                                     40 
+      000016 DB 00            [11]   41 		in	a,(PORTBUTTONS)
+      000018 2F               [ 4]   42 		cpl
+      000019 4F               [ 4]   43 		ld	c,a
+      00001A 3A 02 00         [13]   44 		ld	a,(portbuttons_kbd)
+      00001D B1               [ 4]   45 		or	c
+      00001E C9               [10]   46 		ret
+                                     47 
+                                     48 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                     49 
+      00001F                         50 ps2_isr:
+                                     51 		; SPACE: 0x29      / 0xF0-0x29
+                                     52 		; LEFT:  0xE0-0x6B / 0xE0-0xF0-0x6B 
+                                     53 		; RIGHT: 0xE0-0x74 / 0xE0-0xF0-0x74 
+                                     54 
+      00001F C5               [11]   55 		push	bc
+      000020 DB 55            [11]   56 		in	a,(PORTKEY)
+      000022 4F               [ 4]   57 		ld	c,a
+                                     58 		;call	sysm_printh8
+                                     59 		
+      000023 3A 03 00         [13]   60 		ld	a,(kbd_state)
+      000026 B7               [ 4]   61 		or	a
+      000027 28 0E            [12]   62 		jr	z,ps2_state0
+      000029 FE 01            [ 7]   63 		cp	#1
+      00002B 28 2F            [12]   64 		jr	z,ps2_state1
+      00002D FE 02            [ 7]   65 		cp	#2
+      00002F 28 3A            [12]   66 		jr	z,ps2_state2
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 4.
+Hexadecimal [24-Bits]
+
+
+
+      000031 FE 03            [ 7]   67 		cp	#3
+      000033 28 66            [12]   68 		jr	z,ps2_state3
+      000035 18 5E            [12]   69 		jr	ps2_st2_c
+                                     70 		
+      000037                         71 ps2_state0:	; STATE 0
+      000037 79               [ 4]   72 		ld	a,c
+      000038 FE 29            [ 7]   73 		cp	#0x29		; Space, make
+      00003A 20 0A            [12]   74 		jr	nz,ps2_st0_a
+                                     75 		
+      00003C 3A 02 00         [13]   76 		ld	a,(portbuttons_kbd)
+      00003F CB C7            [ 8]   77 		set	0,a
+      000041 32 02 00         [13]   78 		ld	(portbuttons_kbd),a
+      000044 18 53            [12]   79 		jr	ps2_end
+                                     80 
+      000046 FE F0            [ 7]   81 ps2_st0_a:	cp	#0xf0		; Break code
+      000048 20 07            [12]   82 		jr	nz,ps2_st0_b
+      00004A 3E 01            [ 7]   83 		ld	a,#1
+      00004C 32 03 00         [13]   84 		ld	(kbd_state),a
+      00004F 18 48            [12]   85 		jr	ps2_end
+                                     86 
+      000051 FE E0            [ 7]   87 ps2_st0_b:	cp	#0xe0		; Arrows prefix
+      000053 20 44            [12]   88 		jr	nz,ps2_end
+      000055 3E 02            [ 7]   89 		ld	a,#2
+      000057 32 03 00         [13]   90 		ld	(kbd_state),a
+      00005A 18 3D            [12]   91 		jr	ps2_end
+                                     92 
+      00005C                         93 ps2_state1:	; STATE 1
+      00005C 79               [ 4]   94 		ld	a,c
+      00005D FE 29            [ 7]   95 		cp	#0x29		; Space, break
+      00005F 20 34            [12]   96 		jr	nz,ps2_st2_c
+      000061 3A 02 00         [13]   97 		ld	a,(portbuttons_kbd)
+      000064 CB 87            [ 8]   98 		res	0,a
+      000066 32 02 00         [13]   99 		ld	(portbuttons_kbd),a
+      000069 18 2A            [12]  100 		jr	ps2_st2_c
+                                    101 
+      00006B                        102 ps2_state2:	; STATE 2
+      00006B 79               [ 4]  103 		ld	a,c
+      00006C FE F0            [ 7]  104 		cp	#0xf0		; Break code after E0
+      00006E 20 07            [12]  105 		jr	nz,ps2_st2_a
+      000070 3E 03            [ 7]  106 		ld	a,#3
+      000072 32 03 00         [13]  107 		ld	(kbd_state),a
+      000075 18 22            [12]  108 		jr	ps2_end
+                                    109 		
+      000077 FE 6B            [ 7]  110 ps2_st2_a:	cp	#0x6b		; Left, make
+      000079 20 0C            [12]  111 		jr	nz,ps2_st2_b
+      00007B 3A 02 00         [13]  112 		ld	a,(portbuttons_kbd)
+      00007E CB EF            [ 8]  113 		set	5,a
+      000080 CB BF            [ 8]  114 		res	7,a
+      000082 32 02 00         [13]  115 		ld	(portbuttons_kbd),a
+      000085 18 0E            [12]  116 		jr	ps2_st2_c
+                                    117 
+      000087 FE 74            [ 7]  118 ps2_st2_b:	cp	#0x74		; Right, make
+      000089 20 0A            [12]  119 		jr	nz,ps2_st2_c
+      00008B 3A 02 00         [13]  120 		ld	a,(portbuttons_kbd)
+      00008E CB FF            [ 8]  121 		set	7,a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 5.
+Hexadecimal [24-Bits]
+
+
+
+      000090 CB AF            [ 8]  122 		res	5,a
+      000092 32 02 00         [13]  123 		ld	(portbuttons_kbd),a
+                                    124 
+      000095 AF               [ 4]  125 ps2_st2_c:	xor	a
+      000096 32 03 00         [13]  126 		ld	(kbd_state),a
+      000099 C1               [10]  127 ps2_end:	pop	bc
+      00009A C9               [10]  128 		ret
+                                    129 
+      00009B                        130 ps2_state3:	; STATE 3
+      00009B 79               [ 4]  131 		ld	a,c
+      00009C FE 6B            [ 7]  132 		cp	#0x6b		; Left, break
+      00009E 20 0A            [12]  133 		jr	nz,ps2_st3_a
+      0000A0 3A 02 00         [13]  134 		ld	a,(portbuttons_kbd)
+      0000A3 CB AF            [ 8]  135 		res	5,a
+      0000A5 32 02 00         [13]  136 		ld	(portbuttons_kbd),a
+      0000A8 18 EB            [12]  137 		jr	ps2_st2_c
+                                    138 
+      0000AA FE 74            [ 7]  139 ps2_st3_a:	cp	#0x74		; Right, break
+      0000AC 20 E7            [12]  140 		jr	nz,ps2_st2_c
+      0000AE 3A 02 00         [13]  141 		ld	a,(portbuttons_kbd)
+      0000B1 CB BF            [ 8]  142 		res	7,a
+      0000B3 32 02 00         [13]  143 		ld	(portbuttons_kbd),a
+      0000B6 18 DD            [12]  144 		jr	ps2_st2_c
+                                    145 
+                                    146 		.area _DATA
+                                    147 
+      000000                        148 isr1vector_copy:.ds	2	; PS2 keyboard
+      000002                        149 portbuttons_kbd: .ds	1
+      000003                        150 kbd_state:	.ds	1
+                                    151 

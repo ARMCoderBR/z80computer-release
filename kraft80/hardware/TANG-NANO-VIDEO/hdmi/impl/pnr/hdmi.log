@@ -1,7 +1,7 @@
-Reading netlist file: "Z:\hdmi\impl\gwsynthesis\hdmi.vg"
-Parsing netlist file "Z:\hdmi\impl\gwsynthesis\hdmi.vg" completed
+Reading netlist file: "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/impl/gwsynthesis/hdmi.vg"
+Parsing netlist file "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/impl/gwsynthesis/hdmi.vg" completed
 Processing netlist completed
-Reading constraint file: "Z:\hdmi\src\hdmi.cst"
+Reading constraint file: "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi.cst"
 Physical Constraint parsed completed
 Running placement......
 [10%] Placement Phase 0 completed
@@ -26,10 +26,10 @@ Bitstream generation in progress......
 Bitstream generation completed
 Running power analysis......
 [100%] Power analysis completed
-Generate file "Z:\hdmi\impl\pnr\hdmi.power.html" completed
-Generate file "Z:\hdmi\impl\pnr\hdmi.pin.html" completed
-Generate file "Z:\hdmi\impl\pnr\hdmi.rpt.html" completed
-Generate file "Z:\hdmi\impl\pnr\hdmi.rpt.txt" completed
-Generate file "Z:\hdmi\impl\pnr\hdmi.tr.html" completed
-Thu Sep 18 19:02:18 2025
+Generate file "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/impl/pnr/hdmi.power.html" completed
+Generate file "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/impl/pnr/hdmi.pin.html" completed
+Generate file "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/impl/pnr/hdmi.rpt.html" completed
+Generate file "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/impl/pnr/hdmi.rpt.txt" completed
+Generate file "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/impl/pnr/hdmi.tr.html" completed
+Fri Oct  3 17:03:28 2025
 

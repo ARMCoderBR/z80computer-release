@@ -1,0 +1,30 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    .__.$$$.=  002710 L   |     .__.ABS.=  000000 G   |     .__.CPU.=  000000 L
+    .__.H$L.=  000000 L   |     PORTBUTT=  000000     |     PORTDISP=  000010 
+    PORTLEDS=  000000     |     RAMBASE =  002000     |     RAMHBASE=  008000 
+    RAMHSZ  =  008000     |     RAMSZ   =  006000     |     ROMBASE =  000000 
+    ROMSZ   =  002000     |     STACKTOP=  008000     |   2 delay_15   0001BB R
+  2 delay_15   0001BE R   |   2 delay_5m   0001B2 R   |   2 delay_5m   0001B5 R
+  2 err_ramh   0000E6 R   |   2 err_raml   0000A7 R   |   2 lcd_clea   000142 R
+  2 lcd_home   000126 R   |   2 lcd_home   000134 R   |   2 lcd_init   000150 R
+  2 lcd_out    0001A3 R   |   2 lcd_wmsg   00011D R   |   2 lcd_writ   000101 R
+  2 loop       00001D R   |   2 msg_init   0000F1 R   |   2 msgtitle   0000F7 R
+  2 ramh       0000B1 R   |   2 ramhierr   000077 R   |   2 ramloerr   000064 R
+  2 test_ram   000031 R   |   2 testra1    00003B R   |   2 testra2    000047 R
+  2 testra3    00005A R   |   2 testra4    00006D R   |   2 testra4i   000066 R
+  2 testra5    00007B R   |   2 wait1s     00000B R
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+Area Table
+
+   0 _CODE      size      0   flags    0
+   1 _HEADER    size      0   flags    8
+   2 _HEADER0   size    1C4   flags    8
+   3 _DATA      size      0   flags    0
+

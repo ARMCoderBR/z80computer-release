@@ -1,0 +1,36 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    .__.$$$.=  002710 L   |     .__.ABS.=  000000 G   |     .__.CPU.=  000000 L
+    .__.H$L.=  000000 L   |     AUX     =  00FFFF     |   2 DEC_DTH    0000B9 R
+  2 DEC_DTL    0000CA R   |     EN      =  000001     |   2 INC_DTH    000076 R
+  2 INC_DTL    000088 R   |     PORTA   =  000000     |     PORTB   =  000010 
+    PORTX   =  000000     |     RAMBASE =  002000     |     RAMSZ   =  00E000 
+    ROMBASE =  000000     |     ROMSZ   =  002000     |     RS      =  000001 
+  2 SET_00H    0000A6 R   |   2 SET_88H    000062 R   |     STACKTOP=  00FFFE 
+  2 WR_MODE    000125 R   |     WR_RD   =  00FFFE     |   2 aux1       000246 R
+  2 aux2       000248 R   |   2 b4aval     0001CC R   |   2 b5aval     0001C5 R
+  2 b6aval     0001BE R   |   2 begin      000000 R   |   2 d100ms     000243 R
+  2 d1ms       000231 R   |   2 data_end   000153 R   |   2 dloop      000234 R
+  2 dx100ms    00023B R   |   2 dx1ms      000229 R   |   2 exmem      0000EF R
+  2 final_kb   0000E6 R   |   2 gt9H       00013D R   |   2 gt9L       000151 R
+  2 lcd_begi   000158 R   |   2 lcd_clea   0001E6 R   |   2 lcd_cmd    000199 R
+  2 lcd_en     0001D3 R   |   2 lcd_hex    00012B R   |   2 lcd_writ   00019D R
+  2 loop       000023 R   |   2 msg_init   0001F1 R   |   2 nibbleL    00013F R
+  2 px0        0000CF R   |   2 px1        0000BF R   |   2 px2        0000AA R
+  2 px3        000097 R   |   2 px4        00008D R   |   2 px5        00007D R
+  2 px6        000067 R   |   2 px7        000053 R   |   2 read_key   000028 R
+  2 rs_clr     0001B7 R   |   2 send_byt   00019F R   |   2 send_nib   0001AE R
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+Area Table
+
+   0 _CODE      size      0   flags    0
+   1 _HEADER    size      0   flags    8
+   2 _HEADER0   size    252   flags    8
+   3 _DATA      size      0   flags    0
+

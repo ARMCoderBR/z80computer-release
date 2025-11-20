@@ -2,83 +2,83 @@
  "Device" : "GW1NR-9C",
  "Files" : [
   {
-   "Path" : "Z:/hdmi/src/PS2_module.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/PS2_module.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/SERIAL_module.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/SERIAL_module.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/SOUND_module.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/SOUND_module.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/SPI_module.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/SPI_module.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/TIMER_module.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/TIMER_module.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/gowin_clkdiv/gowin_clkdiv.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/gowin_clkdiv/gowin_clkdiv.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/gowin_dpb/gowin_dpb.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/gowin_dpb/gowin_dpb.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/gowin_rpll/gowin_rpll.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/gowin_rpll/gowin_rpll.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/hdmi/svo_defines.vh",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_defines.vh",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/hdmi/svo_enc.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_enc.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/hdmi/svo_openldi.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_openldi.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/hdmi/svo_tcard.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_tcard.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/hdmi/svo_term.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_term.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/hdmi/svo_tmds.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_tmds.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/hdmi/svo_utils.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_utils.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/hdmi/svo_vdma.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_vdma.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/svo_hdmi.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/svo_hdmi.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/termfont_new.vh",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/termfont_new.vh",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/termfont_old.vh",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/termfont_old.vh",
    "Type" : "verilog"
   },
   {
-   "Path" : "Z:/hdmi/src/top.v",
+   "Path" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/top.v",
    "Type" : "verilog"
   }
  ],
@@ -86,7 +86,7 @@
 
  ],
  "LoopLimit" : 2000,
- "ResultFile" : "Z:/hdmi/impl/temp/rtl_parser.result",
+ "ResultFile" : "/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/impl/temp/rtl_parser.result",
  "Top" : "top",
  "VerilogStd" : "verilog_2001",
  "VhdlStd" : "vhdl_93"

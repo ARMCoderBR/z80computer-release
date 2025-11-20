@@ -18,23 +18,9 @@ PORTMODE	.equ	0x53
 PORTAYADDR	.equ	0x56
 PORTAYDATA	.equ	0x57
 
-USE_KRAFTMON	.equ	0
-
-		.area	_HEADER (ABS)
-
-		.if	USE_KRAFTMON == 1
-
-isr2vector	.equ	0xff04	;STACKTOP+4
-
-		.org 0x2100
-
-		.else
-
 isr2vector	.equ	0x4104	;STACKTOP+4
 
-		.org 0x4200
-
-		.endif
+		.area	CODE
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
 

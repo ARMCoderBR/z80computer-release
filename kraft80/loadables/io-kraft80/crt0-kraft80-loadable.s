@@ -29,7 +29,33 @@
 	.module crt0
 	.globl	_main
 
-	.area	_MAIN
+	.area	HEADER (ABS)
+
+	.org	0x4200
+
+	ld	hl,#0xfffe
+	xor	a
+	ld	(hl),a
+	ld	a,(hl)
+	or	a
+	jr	nz,mem32k
+	inc	(hl)
+	inc	(hl)
+	ld	a,(hl)
+	cp	#2
+	jr	nz,mem32k
+
+	di
+	ld	sp,#0x0000
+	ei
+	jr	init
+
+mem32k:
+	di
+	ld	sp,#0x8000
+	ei
+
+init:
         call    gsinit
 	call	_main
 	di
@@ -47,6 +73,8 @@ gsinit:
 gsinit_next:
         ret
 
+	.area	DATA
+
 	;; Ordering of segments for the linker.
 	.area	_HOME
 	.area	_CODE
@@ -60,7 +88,7 @@ gsinit_next:
 	.area   _BSS
 	.area   _HEAP
 
-	.area   _CODE
+	;.area   _CODE
 
 	.area   _GSFINAL
 

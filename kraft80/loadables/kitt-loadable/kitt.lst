@@ -1,0 +1,98 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+
+
+                                      1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                      2 ;
+                                      3 ;  KITT FOR KRAFT 80
+                                      4 ;  Rev 1.0
+                                      5 ;  12-Nov-2025 - ARMCoder
+                                      6 ;  
+                                      7 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                      8 
+                           000000     9 PORTBUTTONS	.equ	0x00	
+                           000000    10 PORTLEDS	.equ	0x00	
+                           000010    11 PORTDISP	.equ	0x10
+                                     12 
+                                     13 ; FPGA addr mapping (base 0x50)
+                                     14 ; 0000: Video RAM Data (R/W)
+                                     15 ; 0001: Video ADDR Low (W)
+                                     16 ; 0010: Video ADDR High (W)
+                                     17 ; 0011: Video control (W)
+                                     18 ; 0100: Timer Status & Control(R/W)
+                                     19 ; 0101: PS/2 RX Data (R)
+                                     20 ; 0110: Sound REG Index (W)
+                                     21 ; 0111: Sound REG Data (W)
+                                     22 ; 1000: Serial Status & Control (R/W)
+                                     23 ; 1001: Serial Data RX/TX (R/W)
+                                     24 ; 1010: SPI Status & Control(R/W)
+                                     25 ; 1011: SPI Data RX/TX (R/W)
+                                     26 ; 1100
+                                     27 ; 1101
+                                     28 ; 1110
+                                     29 ; 1111: FPGA Interrupt Status Reg (R)
+                                     30 
+                                     31 ; VIDEO
+                           000050    32 PORTDATA	.equ	0x50
+                           000051    33 PORTADDRL	.equ	0x51
+                           000052    34 PORTADDRH	.equ	0x52
+                           000053    35 PORTMODE	.equ	0x53
+                                     36 
+                                     37 ; TIMER STATUS/CONTROL
+                           000054    38 PORTTIMER	.equ	0x54
+                                     39 
+                                     40 ; PS2 KEYBOARD
+                           000055    41 PORTKEY		.equ	0x55
+                                     42 
+                                     43 ; AUDIO
+                           000056    44 PORTAYADDR	.equ	0x56
+                           000057    45 PORTAYDATA	.equ	0x57
+                                     46 
+                                     47 ; SERIAL
+                           000058    48 PORTSERSTATUS	.equ	0x58
+                           000058    49 PORTSERCTL	.equ	0x58
+                           000059    50 PORTSERDATA	.equ	0x59
+                                     51 
+                                     52 ; SPI (Memory card)
+                           00005A    53 PORTSPISTATUS	.equ	0x5A
+                           00005A    54 PORTSPICTL	.equ	0x5A
+                           00005B    55 PORTSPIDATA	.equ	0x5B
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+
+
+                                     56 
+                                     57 ;   FPGA STATUS
+                           00005F    58 PORTFPGASTATUS	.equ	0x5F
+                                     59 
+                                     60 		.area	CODE
+                                     61 
+                           004600    62 BASE_DATA	.equ	0x4600
+                                     63 
+      000000 01 01 01         [10]   64 		ld	bc,#0x0101
+                                     65 
+      000003 21 00 40         [10]   66 loop1:		ld	hl,#0x4000
+      000006 2B               [ 6]   67 loop2:		dec	hl
+      000007 7C               [ 4]   68 		ld	a,h
+      000008 B5               [ 4]   69 		or	l
+      000009 20 FB            [12]   70 		jr	nz,loop2
+      00000B 79               [ 4]   71 		ld	a,c
+      00000C D3 00            [11]   72 		out	(PORTLEDS),a
+      00000E CB 40            [ 8]   73 		bit	0,b
+      000010 28 04            [12]   74 		jr	z,loop2a
+      000012 CB 27            [ 8]   75 		sla	a
+      000014 18 02            [12]   76 		jr	loop2b
+      000016                         77 loop2a:
+      000016 CB 3F            [ 8]   78 		srl	a
+      000018                         79 loop2b:
+      000018 4F               [ 4]   80 		ld	c,a
+      000019 E6 81            [ 7]   81 		and	#0x81
+      00001B 28 E6            [12]   82 		jr	z,loop1
+      00001D 04               [ 4]   83 		inc	b
+      00001E 18 E3            [12]   84 		jr	loop1
+                                     85 		
+                                     86 		.area	_DATA
+                                     87 
+                                     88 

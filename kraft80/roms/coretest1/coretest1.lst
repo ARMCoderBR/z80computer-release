@@ -1,0 +1,58 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+
+
+                                      1 ; =============================================================================
+                                      2 ;
+                                      3 ;   KRAFT 80 Z80 Computer
+                                      4 ;   Core Test 1 Program for the Kraft 80 computer
+                                      5 ;   2025-Jul-09
+                                      6 ;   Milton Maldonado Jr. (ARMCoder)
+                                      7 ;
+                                      8 ; =============================================================================
+                                      9 
+                                     10 
+                                     11 ; =============================================================================
+                                     12 ; --- Hardware Mapping ---
+                           000000    13 PORTBUTTONS     .equ 0x00 ;PORTX address (Read) 
+                           000000    14 PORTLEDS        .equ 0x00 ;PORTA address (Write)
+                                     15 
+                           000000    16 ROMBASE         .equ 0
+                           002000    17 ROMSZ           .equ 0x2000
+                                     18 
+                                     19 ; =============================================================================
+                                     20 ; --- Reset Vector ---
+                                     21 
+                                     22 	.area	_HEADER (ABS)
+                                     23 
+      000000                         24 	.org	0x0000			;origem no endereço 00h de memória
+                                     25 
+                                     26 ; =============================================================================
+                                     27 ; --- Main Program ---
+                                     28 
+      000000 21 00 C0         [10]   29 	ld	hl,#0xc000
+      000003 16 01            [ 7]   30 	ld	d,#1
+                                     31 
+      000005 23               [ 6]   32 loop:	inc	hl
+      000006 7C               [ 4]   33 	ld	a,h
+      000007 B5               [ 4]   34 	or	l
+      000008 20 FB            [12]   35 	jr	nz,loop
+                                     36 
+      00000A 21 00 C0         [10]   37 	ld	hl,#0xc000
+                                     38 
+      00000D DB 00            [11]   39 	in	a,(PORTBUTTONS)
+      00000F 2F               [ 4]   40 	cpl
+      000010 4F               [ 4]   41 	ld	c,a
+      000011 7A               [ 4]   42 	ld	a,d
+      000012 B1               [ 4]   43 	or	c
+                                     44 
+      000013 D3 00            [11]   45 	out	(PORTLEDS),a
+                                     46 
+      000015 CB 0A            [ 8]   47 	rrc	d
+      000017 18 EC            [12]   48 	jr	loop
+                                     49 
+                                     50 ;=======================================================
+                                     51 ; --- Final do Programa ---
+                                     52 	.area _DATA
+                                     53 

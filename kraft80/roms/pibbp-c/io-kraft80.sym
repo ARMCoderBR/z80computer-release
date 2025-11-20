@@ -1,0 +1,65 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    .__.$$$.                                                    =  002710 L
+    .__.ABS.                                                    =  000000 G
+    .__.CPU.                                                    =  000000 L
+    .__.H$L.                                                    =  000000 L
+    EN                                                          =  000001 
+    PORTA                                                       =  000000 
+    PORTB                                                       =  000010 
+    PORTX                                                       =  000000 
+    RS                                                          =  000001 
+  7 __xinit__dispcol                                               000000 R
+  0 _d100ms                                                        00018D GR
+  0 _d1ms                                                          00017B GR
+  2 _dispcol                                                       000000 GR
+  0 _dx100ms                                                       00019C GR
+  0 _dx1ms                                                         000185 GR
+  0 _getchar                                                       000168 GR
+  0 _lcd_beg2                                                      000235 GR
+  0 _lcd_begin                                                     000240 GR
+  0 _lcd_clear                                                     000228 GR
+  0 _lcd_cmd                                                       0001DC GR
+  0 _lcd_home                                                      00020B GR
+  0 _lcd_home2                                                     000219 GR
+  0 _lgets                                                         00009C GR
+  0 _lgets_noecho                                                  000000 GR
+  0 _putchar                                                       00016F GR
+  0 _putchar_lcd                                                   000154 GR
+  0 _putstr                                                        000145 GR
+  0 _putstr_lcd                                                    00015B GR
+  0 _readbuttons                                                   000177 GR
+  0 _send_nibble                                                   0001A4 GR
+  0 _setleds                                                       000174 GR
+  0 aux1                                                           000190 R
+  0 aux2                                                           000192 R
+  0 b4aval                                                         0001C2 R
+  0 b5aval                                                         0001BB R
+  0 b6aval                                                         0001B4 R
+  0 dloop                                                          00017E R
+  0 lcd_en                                                         0001C9 R
+  0 lcd_w1                                                         0001EC R
+  0 lcd_w2                                                         0001F3 R
+  0 lcd_write                                                      0001E0 R
+  0 rs_clr                                                         0001AD R
+  0 send_byte                                                      0001FC R
+
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+Area Table
+
+   0 _CODE                                      size    284   flags    0
+   1 _DATA                                      size      0   flags    0
+   2 _INITIALIZED                               size      1   flags    0
+   3 _DABS                                      size      0   flags    8
+   4 _HOME                                      size      0   flags    0
+   5 _GSINIT                                    size      0   flags    0
+   6 _GSFINAL                                   size      0   flags    0
+   7 _INITIALIZER                               size      1   flags    0
+   8 _CABS                                      size      0   flags    8
+

@@ -1,0 +1,87 @@
+ASxxxx Linker V03.00 + NoICE + sdld,  page 1.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+.  .ABS.                            00000000    00000000 =           0. bytes (ABS,CON)
+
+      Value  Global                              Global Defined In Module
+      -----  --------------------------------   ------------------------
+     00000000  .__.ABS.                           
+     00000000  l__CODE                         
+     00000010  l_DATA                          
+     00000093  l__DATA                         
+     00001540  l_CODE                          
+     00004200  s_CODE                          
+     00004200  s__CODE                         
+     00008000  s__DATA                         
+     00008093  s_DATA                          
+ASxxxx Linker V03.00 + NoICE + sdld,  page 2.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+CODE                                00004200    00001540 =        5440. bytes (REL,CON)
+
+      Value  Global                              Global Defined In Module
+      -----  --------------------------------   ------------------------
+     00004792  set_screen                         graphics
+     00004797  drawbaseline                       graphics
+     000047A9  clear_lines                        graphics
+     000047E3  clrscr                             graphics
+     000047F4  print_cannon                       graphics
+     0000480D  print_cannon_die                   graphics
+     00004829  print_invaders                     graphics
+     000048FA  print_sprite                       graphics
+     00004917  print_bunkers                      graphics
+     00004DB1  init_inputs                        
+     00004DC7  update_inputs                      
+     00004E69  init_timer                         
+     00004EA4  print_string                       
+     00004EBD  print_number                       
+
+ASxxxx Linker V03.00 + NoICE + sdld,  page 3.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_DATA                               00008000    00000093 =         147. bytes (REL,CON)
+
+      Value  Global                              Global Defined In Module
+      -----  --------------------------------   ------------------------
+     00008001  cannon_hpos_px                     
+     0000800B  invader_matrix                     
+     00008045  col_start                          
+     00008046  col_end                            
+     00008048  row_end                            
+     00008051  cannondie_state                    
+ASxxxx Linker V03.00 + NoICE + sdld,  page 4.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+DATA                                00008093    00000010 =          16. bytes (REL,CON)
+
+      Value  Global                              Global Defined In Module
+      -----  --------------------------------   ------------------------
+     00008098  scrpos_invaders                    graphics
+     0000809F  stepping                           graphics
+
+ASxxxx Linker V03.00 + NoICE + sdld,  page 5.
+
+Files Linked                              [ module(s) ]
+
+invaders.rel                              [  ]
+graphics.rel                              [ graphics ]
+inputs.rel                                [  ]
+timer.rel                                 [  ]
+font.rel                                  [  ]
+
+ASxxxx Linker V03.00 + NoICE + sdld,  page 6.
+
+User Base Address Definitions
+
+_CODE = 0x4200
+_DATA = 0x8000
+
+

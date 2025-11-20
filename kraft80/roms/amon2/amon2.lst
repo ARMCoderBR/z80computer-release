@@ -1,0 +1,512 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+
+
+                                      1 ; =============================================================================
+                                      2 ;
+                                      3 ;   KRAFT 80 Z80 Computer
+                                      4 ;   Monitor Program for the Kraft 80 computer
+                                      5 ;   2025-May-08
+                                      6 ;   Milton Maldonado Jr. (ARMCoder)
+                                      7 ;
+                                      8 ;   This hardware+software project was based on the project quoted below:
+                                      9 ;
+                                     10 ;   ==QUOTE============================
+                                     11 ;   " Z80 WR Kits Microcomputer       "
+                                     12 ;   " Monitor Program for Alpha Z80   " 
+                                     13 ;   "                                 "
+                                     14 ;   " amon\amon.asm                   "
+                                     15 ;   " Input  PORTX address 01h        "
+                                     16 ;   " Output PORTA address 02h        "
+                                     17 ;   " Output PORTB address 04h        "
+                                     18 ;   "                                 "
+                                     19 ;   " 2816 EEPROM  2kB  0000h - 07FFh "
+                                     20 ;   " 6116 SRAM    2kB  0800h - 0FFFh "
+                                     21 ;   "                                 "
+                                     22 ;   "                                 "
+                                     23 ;   " Compiler: Tasm                  "
+                                     24 ;   "                                 "
+                                     25 ;   " Author: Dr. Eng. Wagner Rambo   "
+                                     26 ;   " Date:   2025, January           "       
+                                     27 ;   =========================ENDQUOTE==
+                                     28 ;
+                                     29 ; =============================================================================
+                                     30 
+                                     31 
+                                     32 ; =============================================================================
+                                     33 ; --- Hardware Mapping ---
+                           000000    34 PORTX           .equ 0x00 ;PORTX address (Read) 
+                           000000    35 PORTA           .equ 0x00 ;PORTA address (Write)
+                           000010    36 PORTB           .equ 0x10 ;PORTB address (Write)
+                           000001    37 EN		.equ	0x01				;LCD enable pin (PORTB bit 1)
+                           000001    38 RS		.equ	0x01				;LCD RS pin (uses or logic)
+                                     39 
+                           000000    40 ROMBASE         .equ 0
+                           002000    41 ROMSZ           .equ 0x2000
+                           002000    42 RAMBASE         .equ 0x2000
+                           00E000    43 RAMSZ           .equ 0xE000
+                                     44 
+                                     45 ; =============================================================================
+                                     46 ; --- General Purpose Registers ---
+                           00FFFF    47 AUX 	 .equ	(RAMBASE+RAMSZ - 1)	;auxiliar para armazenamento 
+                           00FFFE    48 WR_RD	 .equ	(RAMBASE+RAMSZ - 2)	;registrador de escrita '1' / leitura '0' 
+                           00FFFE    49 STACKTOP .equ	(RAMBASE+RAMSZ - 2)
+                                     50 
+                                     51 ; =============================================================================
+                                     52 ; --- Reset Vector ---
+                                     53 
+                                     54     .area	_HEADER (ABS)
+                                     55 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+
+
+      000000                         56 		.org	0x0000			;origem no endereço 00h de memória
+                                     57 	
+                                     58 
+                                     59 ; =============================================================================
+                                     60 ; --- Main Program ---
+      000000                         61 begin:
+                                     62 
+      000000 31 FE FF         [10]   63 		ld	sp,#STACKTOP		;pilha de memória 
+      000003 CD 58 01         [17]   64 		call	lcd_begin		;inicializa LCD no modo 4 bits		
+      000006 16 02            [ 7]   65 		ld	d,#2			;carrega 2d em d 
+      000008 CD 3B 02         [17]   66 		call	dx100ms			;aguarda 500ms 				
+      00000B 06 0C            [ 7]   67 		ld	b,#0x0C			;desliga cursor e blink 
+      00000D CD 99 01         [17]   68 		call	lcd_cmd 		;envia comando 
+      000010 CD F1 01         [17]   69 		call	msg_init 		;escreve título "Alpha Z80" 
+      000013 16 0A            [ 7]   70 		ld	d,#10			;carrega 10d em d 
+      000015 CD 3B 02         [17]   71 		call	dx100ms			;aguarda 1 seg. 
+                                     72 		
+      000018 3E 00            [ 7]   73 		ld	a,#0x00			;carrega acc com 00h 
+      00001A 32 FE FF         [13]   74 		ld	(WR_RD),a 		;zera registrador de escrita/leitura para iniciar em modo leitura 
+                                     75 		
+      00001D 21 00 20         [10]   76 		ld	hl,#RAMBASE		;endereço inicial da RAM é carregado no par hl
+      000020 CD EF 00         [17]   77 		call	exmem			;exibe endereço e respectivo conteúdo no LCD "examine memory"
+                                     78 		
+      000023                         79 loop:
+      000023 CD 28 00         [17]   80 		call	read_keyb 		;chama sub-rotina para leitura do teclado 
+      000026 18 FB            [12]   81 		jr	loop 			;ad infinitum 
+                                     82 
+                                     83 
+                                     84 ; =============================================================================
+                                     85 ; --- Sub-Rotinas ---
+                                     86 
+                                     87 
+                                     88 ; =============================================================================
+                                     89 ; --- read_keyb ---
+      000028                         90 read_keyb:
+      000028 DB 00            [11]   91 		in 		a,(PORTX)		;lê o conteúdo de PORTX 
+      00002A CB 7F            [ 8]   92 		bit		7,a				;bit 7 ativo?
+      00002C CA 53 00         [10]   93 		jp		z,px7			;sim, desvia para label px7
+      00002F CB 77            [ 8]   94 		bit		6,a				;não, bit 6 ativo?
+      000031 CA 67 00         [10]   95 		jp		z,px6			;sim, desvia para label px6
+      000034 CB 6F            [ 8]   96 		bit		5,a				;não, bit 5 ativo?
+      000036 CA 7D 00         [10]   97 		jp		z,px5			;sim, desvia para label px5
+      000039 CB 67            [ 8]   98 		bit		4,a				;não, bit 4 ativo?
+      00003B CA 8D 00         [10]   99 		jp		z,px4			;sim, desvia para label px4	
+      00003E CB 5F            [ 8]  100 		bit		3,a				;bit 3 ativo?
+      000040 CA 97 00         [10]  101 		jp		z,px3			;sim, desvia para label px3
+      000043 CB 57            [ 8]  102 		bit		2,a				;não, bit 2 ativo?
+      000045 CA AA 00         [10]  103 		jp		z,px2			;sim, desvia para label px2
+      000048 CB 4F            [ 8]  104 		bit		1,a				;não, bit 1 ativo?
+      00004A CA BF 00         [10]  105 		jp		z,px1			;sim, desvia para label px1
+      00004D CB 47            [ 8]  106 		bit		0,a				;não, bit 0 ativo?
+      00004F CA CF 00         [10]  107 		jp		z,px0			;sim, desvia para label px0
+      000052 C9               [10]  108 		ret 					;retorna, se nenhum botão estiver pressionado
+                                    109 
+                                    110 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 3.
+Hexadecimal [24-Bits]
+
+
+
+      000053                        111 px7:							;incrementa nibble mais significativo do endereço / seta dado com o valor 88h
+      000053 3A FE FF         [13]  112 		ld		a,(WR_RD)		;carrega registrador de escrita/leitura em acc
+      000056 FE 00            [ 7]  113 		cp		#0x00			;compara com 00h
+      000058 C2 62 00         [10]  114 		jp		nz,SET_88H		;se for 01h (escrita), desvia para SET_88H 
+      00005B 11 00 01         [10]  115 		ld		de,#0x100		;do contrário é modo leitura: carrega 100h no par de 
+      00005E 19               [11]  116 		add		hl,de 			;incrementa o par hl (endereço atual) em 10h 
+      00005F C3 E6 00         [10]  117 		jp		final_kb		;desvia para saída da sub-rotina
+                                    118 		
+      000062                        119 SET_88H:
+      000062 36 88            [10]  120 		ld		(hl),#0x88
+      000064 C3 E6 00         [10]  121 		jp		final_kb		;desvia para saída da sub-rotina
+                                    122 		
+                                    123 		
+      000067                        124 px6:							;incrementa segundo nibble do endereço / incrementa nibble mais significativo do dado 
+      000067 3A FE FF         [13]  125 		ld		a,(WR_RD)		;carrega registrador de escrita/leitura em acc
+      00006A FE 00            [ 7]  126 		cp		#0x00			;compara com 00h
+      00006C C2 76 00         [10]  127 		jp		nz,INC_DTH		;se for 01h (escrita), desvia para INC_DTH
+      00006F 11 10 00         [10]  128 		ld		de,#0x10		;do contrário é modo leitura: carrega 10h no par de 
+      000072 19               [11]  129 		add		hl,de 			;incrementa o par hl (endereço atual) em 10h 
+      000073 C3 E6 00         [10]  130 		jp		final_kb		;desvia para saída da sub-rotina 
+                                    131 		
+      000076                        132 INC_DTH:						;incrementa dado HIGH 
+      000076 7E               [ 7]  133 		ld		a,(hl)			;carrega conteúdo do endereço atual em acc
+      000077 C6 10            [ 7]  134 		add		a,#0x10			;incrementa nibble mais significativo do dado 
+      000079 77               [ 7]  135 		ld		(hl),a			;escreve na memória 
+      00007A C3 E6 00         [10]  136 		jp		final_kb		;desvia para saída da sub-rotina 
+                                    137 		
+                                    138 		
+      00007D                        139 px5:							;incrementa nibble menos significativo do endereço / incrementa nibble menos significativo do dado 
+      00007D 3A FE FF         [13]  140 		ld		a,(WR_RD)		;carrega registrador de escrita/leitura em acc
+      000080 FE 00            [ 7]  141 		cp		#0x00			;compara com 00h
+      000082 C2 88 00         [10]  142 		jp		nz,INC_DTL		;se for 01h (escrita), desvia para INC_DTL 
+      000085 23               [ 6]  143 		inc		hl				;do contrário é modo leitura: incrementa endereço 
+      000086 18 5E            [12]  144 		jr		final_kb		;desvia para saída da sub-rotina
+                                    145 
+      000088                        146 INC_DTL:						;incrementa dado LOW 
+      000088 7E               [ 7]  147 		ld		a,(hl)			;carrega conteúdo do endereço atual em acc
+      000089 3C               [ 4]  148 		inc		a				;incrementa nibble menos significativo do dado 
+      00008A 77               [ 7]  149 		ld		(hl),a			;escreve na memória 
+      00008B 18 59            [12]  150 		jr		final_kb		;desvia para saída da sub-rotina 
+                                    151 	
+                                    152 	
+      00008D                        153 px4:							;alterna entre o modo leitura/escrita 
+      00008D 3A FE FF         [13]  154 		ld		a,(WR_RD)		;carrega acc com valor de WR_RD
+      000090 EE 01            [ 7]  155 		xor		#0x01			;inverte bit menos significativo de acc
+      000092 32 FE FF         [13]  156 		ld		(WR_RD),a		;inverte bit menos sig. de WR_RD
+      000095 18 4F            [12]  157 		jr		final_kb		;desvia para saída da sub-rotina
+                                    158 		
+                                    159 		
+      000097                        160 px3:							;decrementa nibble mais significativo do endereço / seta dado com o valor 00h 	
+      000097 3A FE FF         [13]  161 		ld		a,(WR_RD)		;carrega registrador de escrita/leitura em acc
+      00009A FE 00            [ 7]  162 		cp		#0x00			;compara com 00h
+      00009C C2 A6 00         [10]  163 		jp		nz,SET_00H		;se for 01h (escrita), desvia para SET_00H 	
+      00009F 11 00 01         [10]  164 		ld		de,#0x100		;carrega 100h no par de 
+      0000A2 ED 52            [15]  165 		sbc		hl,de 			;decrementa o par hl (endereço atual) em 100h 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 4.
+Hexadecimal [24-Bits]
+
+
+
+      0000A4 18 40            [12]  166 		jr		final_kb		;desvia para saída da sub-rotina
+                                    167 
+      0000A6                        168 SET_00H:
+      0000A6 36 00            [10]  169 		ld		(hl),#0x00
+      0000A8 18 3C            [12]  170 		jr		final_kb		;desvia para saída da sub-rotina
+                                    171 	
+                                    172 	
+      0000AA                        173 px2:							;decrementa segundo nibble do endereço / decrementa nibble mais significativo do dado 
+      0000AA 3A FE FF         [13]  174 		ld		a,(WR_RD)		;carrega registrador de escrita/leitura em acc
+      0000AD FE 00            [ 7]  175 		cp		#0x00			;compara com 00h
+      0000AF C2 B9 00         [10]  176 		jp		nz,DEC_DTH		;se for 01h (escrita), desvia para WR_NH
+      0000B2 11 10 00         [10]  177 		ld		de,#0x10		;do contrário é modo leitura: carrega 10h no par de 
+      0000B5 ED 52            [15]  178 		sbc		hl,de 			;decrementa o par hl (endereço atual) em 10h 
+      0000B7 18 2D            [12]  179 		jr		final_kb		;desvia para saída da sub-rotina 
+                                    180 
+      0000B9                        181 DEC_DTH:						;decrementa dado HIGH 		
+      0000B9 7E               [ 7]  182 		ld		a,(hl)			;carrega conteúdo do endereço atual em acc
+      0000BA DE 10            [ 7]  183 		sbc		a,#0x10			;decrementa nibble mais significativo do dado 
+      0000BC 77               [ 7]  184 		ld		(hl),a			;escreve na memória 
+      0000BD 18 27            [12]  185 		jr		final_kb		;desvia para saída da sub-rotina
+                                    186 		
+                                    187 		
+      0000BF                        188 px1:
+      0000BF 3A FE FF         [13]  189 		ld		a,(WR_RD)		;carrega registrador de escrita/leitura em acc
+      0000C2 FE 00            [ 7]  190 		cp		#0x00			;compara com 00h
+      0000C4 C2 CA 00         [10]  191 		jp		nz,DEC_DTL		;se for 01h (escrita), desvia para DEC_DTL 
+      0000C7 2B               [ 6]  192 		dec 	hl				;do contrário é modo leitura: decrementa endereço 
+      0000C8 18 1C            [12]  193 		jr		final_kb		;desvia para saída da sub-rotina  
+                                    194 
+      0000CA                        195 DEC_DTL:						;decrementa dado LOW 
+      0000CA 7E               [ 7]  196 		ld		a,(hl)			;carrega conteúdo do endereço atual em acc
+      0000CB 3D               [ 4]  197 		dec		a				;decrementa nibble menos significativo do dado 
+      0000CC 77               [ 7]  198 		ld		(hl),a			;escreve na memória 
+      0000CD 18 17            [12]  199 		jr		final_kb		;desvia para saída da sub-rotina 
+                                    200 		
+                                    201 		
+      0000CF                        202 px0:							;roda o software contido na RAM 
+      0000CF 06 20            [ 7]  203 		ld		b,#' '			;escreve "run"...
+      0000D1 CD 9D 01         [17]  204 		call	lcd_write		; ...
+      0000D4 06 72            [ 7]  205 		ld		b,#'r'			; ...
+      0000D6 CD 9D 01         [17]  206 		call	lcd_write		; ...
+      0000D9 06 75            [ 7]  207 		ld		b,#'u'			; ...
+      0000DB CD 9D 01         [17]  208 		call	lcd_write		; ...
+      0000DE 06 6E            [ 7]  209 		ld		b,#'n'			; ...
+      0000E0 CD 9D 01         [17]  210 		call	lcd_write		; no lcd
+      0000E3 CD 00 20         [17]  211 		call	RAMBASE			;roda o programa a partir do endereço inicial da RAM
+                                    212 
+                                    213 
+      0000E6                        214 final_kb:
+      0000E6 CD EF 00         [17]  215 		call	exmem 			;exibe memória atual
+      0000E9 16 02            [ 7]  216 		ld		d,#2				;carrega d com 2 
+      0000EB CD 3B 02         [17]  217 		call	dx100ms			;anti-bouncing (200ms)			 		
+      0000EE C9               [10]  218 		ret 					;retorna da sub-rotina 
+                                    219 
+                                    220 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 5.
+Hexadecimal [24-Bits]
+
+
+
+                                    221 ; =============================================================================
+                                    222 ; --- exmem: Examine Memory ---
+                                    223 ; --- Gera linha 1 do programa monitor no formato:
+                                    224 ;     0000h: 00h R                                   ---
+      0000EF                        225 exmem:
+      0000EF CD E6 01         [17]  226 		call	lcd_clear		;limpa lcd
+      0000F2 7C               [ 4]  227 		ld		a,h				;armazena byte HIGH de endereço em acc
+      0000F3 CD 2B 01         [17]  228 		call	lcd_hex			;mostra em hexadecimal
+      0000F6 7D               [ 4]  229 		ld		a,l				;armazena byte LOW de endereço em acc
+      0000F7 CD 2B 01         [17]  230 		call	lcd_hex			;mostra em hexadecimal
+      0000FA 06 68            [ 7]  231 		ld		b,#'h'			;armazena byte 'h' no acc
+      0000FC CD 9D 01         [17]  232 		call	lcd_write		;escreve no lcd
+      0000FF 06 3A            [ 7]  233 		ld		b,#':'			;armazena byte ':' no acc
+      000101 CD 9D 01         [17]  234 		call	lcd_write		;escreve no lcd
+      000104 06 20            [ 7]  235 		ld		b,#' '			;armazena byte ' ' no acc
+      000106 CD 9D 01         [17]  236 		call	lcd_write		;escreve no lcd
+      000109 7E               [ 7]  237 		ld		a,(hl)			;armazena conteúdo do endereço atual em acc
+      00010A CD 2B 01         [17]  238 		call	lcd_hex			;mostra em hexadecimal
+      00010D 06 68            [ 7]  239 		ld		b,#'h'			;armazena byte 'h' no acc
+      00010F CD 9D 01         [17]  240 		call	lcd_write		;escreve no lcd
+      000112 06 20            [ 7]  241 		ld		b,#' '			;armazena byte ' ' no acc
+      000114 CD 9D 01         [17]  242 		call	lcd_write		;escreve no lcd
+                                    243 
+      000117 3A FE FF         [13]  244 		ld		a,(WR_RD)		;carrega registrador de escrita/leitura em acc
+      00011A FE 00            [ 7]  245 		cp		#0x00			;compara com 00h
+      00011C C2 25 01         [10]  246 		jp		nz,WR_MODE		;se for 01h (escrita), desvia para WR_MODE
+      00011F 06 52            [ 7]  247 		ld		b,#'R'			;do contrário, informa que é modo leitura
+      000121 CD 9D 01         [17]  248 		call	lcd_write		;escreve no display
+      000124 C9               [10]  249 		ret						;retorna da sub-rotina
+                                    250 
+      000125                        251 WR_MODE:
+      000125 06 57            [ 7]  252 		ld		b,#'W'			;informa que é modo escrita
+      000127 CD 9D 01         [17]  253 		call	lcd_write		;escreve no display
+      00012A C9               [10]  254 		ret						;retorna da sub-rotina
+                                    255 
+                                    256 
+                                    257 ;=======================================================
+                                    258 ; --- Exibe conteúdo em hexadecimal no LCD ---
+      00012B                        259 lcd_hex:
+      00012B 32 FF FF         [13]  260 		ld		(AUX),a			;armazena cópia do acc na RAM
+      00012E 1F               [ 4]  261 		rra						;rotação de acc 4x para...
+      00012F 1F               [ 4]  262 		rra						; a direita para separar...
+      000130 1F               [ 4]  263 		rra						; o nibble mais...
+      000131 1F               [ 4]  264 		rra						; significativo
+      000132 E6 0F            [ 7]  265 		and		#0x0F				;preserva o nibble mais sig. na posição menos sig.
+      000134 FE 0A            [ 7]  266 		cp		#0x0A				;compara acc com 0Ah
+      000136 D2 3D 01         [10]  267 		jp		nc,gt9H			;se não houve carry, acc > 9 e desvia para gt9H
+      000139 C6 30            [ 7]  268 		add		a,#0x30			;do contrário, acc <= 9 e soma 30h para o '0' da ASCII
+      00013B 18 02            [12]  269 		jr		nibbleL			;desvia para calcular nibble menos significativo
+      00013D                        270 gt9H:
+      00013D C6 37            [ 7]  271 		add		a,#0x37			;soma 37h para o 'A' da ASCII (41h - 0Ah) 
+      00013F                        272 nibbleL:
+      00013F 47               [ 4]  273 		ld		b,a				;carrega b com acc
+      000140 CD 9D 01         [17]  274 		call	lcd_write		;escreve nibble mais significativo no display
+      000143 3A FF FF         [13]  275 		ld		a,(AUX)			;recupera acc da RAM
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 6.
+Hexadecimal [24-Bits]
+
+
+
+      000146 E6 0F            [ 7]  276 		and		#0x0F			;preserva nibble menos sig.
+      000148 FE 0A            [ 7]  277 		cp		#0x0A			;compara acc com 0Ah
+      00014A D2 51 01         [10]  278 		jp		nc,gt9L			;se não houve carry, acc > 9 e desvia para gt9L
+      00014D C6 30            [ 7]  279 		add		a,#0x30			;do contrário, acc <= 9 e soma 30h para o '0' da ASCII
+      00014F 18 02            [12]  280 		jr		data_end		;desvia para finalizar escrita do dado
+      000151                        281 gt9L:
+      000151 C6 37            [ 7]  282 		add		a,#0x37			;soma 37h para o 'A' da ASCII (41h - 0Ah)
+      000153                        283 data_end:
+      000153 47               [ 4]  284 		ld		b,a				;carrega b com acc
+      000154 CD 9D 01         [17]  285 		call	lcd_write		;escreve nibble menos significativo no display
+      000157 C9               [10]  286 		ret						;retorno da sub-rotina
+                                    287 
+                                    288 
+                                    289 ; =============================================================================
+                                    290 ; --- Inicializa LCD modo de 4 bits ---
+      000158                        291 lcd_begin:
+      000158 16 32            [ 7]  292 		ld		d,#50		;carrega 50d em d 
+      00015A CD 29 02         [17]  293 		call	dx1ms			;tempo para estabilização (50ms)
+      00015D 06 30            [ 7]  294 		ld		b,#0x30		;protocolo de inicialização
+      00015F 0E 00            [ 7]  295 		ld		c,#0x00		;envio de comando
+      000161 CD AE 01         [17]  296 		call	send_nibble		;envia 30h para o LCD
+      000164 16 05            [ 7]  297 		ld		d,#5		;carrega 5d em d 
+      000166 CD 29 02         [17]  298 		call	dx1ms			;aguarda 5ms (tempo superior ao datasheet)
+      000169 06 30            [ 7]  299 		ld		b,#0x30		;protocolo de inicialização
+      00016B 0E 00            [ 7]  300 		ld		c,#0x00		;envio de comando
+      00016D CD AE 01         [17]  301 		call	send_nibble		;envia 30h para o LCD		
+      000170 CD 31 02         [17]  302 		call	d1ms 			;aguarda 1ms (tempo superior ao datasheet)
+      000173 06 30            [ 7]  303 		ld		b,#0x30		;protocolo de inicialização
+      000175 0E 00            [ 7]  304 		ld		c,#0x00		;envio de comando
+      000177 CD AE 01         [17]  305 		call	send_nibble		;envia 30h para o LCD
+      00017A 06 20            [ 7]  306 		ld		b,#0x20		;LCD no modo 4 bits
+      00017C 0E 00            [ 7]  307 		ld		c,#0x00		;envio de comando
+      00017E CD AE 01         [17]  308 		call	send_nibble		;envia 30h para o LCD
+      000181 06 28            [ 7]  309 		ld		b,#0x28		;5x8 pontos por caractere, duas linhas
+      000183 CD 99 01         [17]  310 		call	lcd_cmd			;envia comando 28h
+      000186 06 0F            [ 7]  311 		ld		b,#0x0F		;liga display, cursor e blink
+      000188 CD 99 01         [17]  312 		call	lcd_cmd			;envia comando 0Fh
+      00018B 06 01            [ 7]  313 		ld		b,#0x01		;limpa LCD
+      00018D CD 99 01         [17]  314 		call	lcd_cmd			;envia comando 01h
+      000190 06 06            [ 7]  315 		ld		b,#0x06		;modo de incremento de endereço para direita, movendo apenas o cursor 
+      000192 CD 99 01         [17]  316 		call	lcd_cmd			;envia comando 06h
+      000195 CD E6 01         [17]  317 		call	lcd_clear		;limpa o display
+      000198 C9               [10]  318 		ret						;retorno da sub-rotina
+                                    319 		
+                                    320 
+                                    321 ; =============================================================================
+                                    322 ; --- Envia Comandos / Escreve no LCD ---
+      000199                        323 lcd_cmd:
+      000199 0E 00            [ 7]  324 		ld		c,#0x00
+      00019B 18 02            [12]  325 		jr		send_byte
+      00019D                        326 lcd_write:
+      00019D 0E 01            [ 7]  327 		ld		c,#0x01			;01h para envio de caracteres
+      00019F                        328 send_byte:		
+      00019F CD AE 01         [17]  329 		call	send_nibble		;envia nibble mais significativo
+      0001A2 78               [ 4]  330 		ld		a,b				;carrega conteúdo de b em acc
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 7.
+Hexadecimal [24-Bits]
+
+
+
+      0001A3 17               [ 4]  331 		rla						;rotaciona acc para esquerda 4x
+      0001A4 17               [ 4]  332 		rla						;
+      0001A5 17               [ 4]  333 		rla						;
+      0001A6 17               [ 4]  334 		rla						;
+      0001A7 E6 F0            [ 7]  335 		and		#0xF0			;máscara para preservar nibble mais significativo
+      0001A9 47               [ 4]  336 		ld		b,a				;atualiza b
+      0001AA CD AE 01         [17]  337 		call	send_nibble		;envia nibble menos significativo
+      0001AD C9               [10]  338 		ret						;retorno da sub-rotina
+                                    339 		
+                                    340 
+                                    341 ;==============================================================================
+                                    342 ; --- Envia cada nibble separadamente e gera pulso de enable ---
+      0001AE                        343 send_nibble:
+      0001AE 3E 00            [ 7]  344 		ld		a,#0x00			;zera conteúdo de ACC
+      0001B0 CB 41            [ 8]  345 		bit		0,c				;bit 0 de c em LOW?
+      0001B2 CA B7 01         [10]  346 		jp		z,rs_clr		;sim, desvia para manter RS limpo
+      0001B5 3E 01            [ 7]  347 		ld		a,#(0x00|RS)		;não, seta bit RS
+      0001B7                        348 rs_clr:
+      0001B7 CB 78            [ 8]  349 		bit		7,b				;bit7 de B em LOW?
+      0001B9 CA BE 01         [10]  350 		jp		z,b6aval		;sim, desvia para avaliar bit6
+      0001BC CB FF            [ 8]  351 		set		7,a				;não, seta bit 7 de acc
+      0001BE                        352 b6aval:
+      0001BE CB 70            [ 8]  353 		bit		6,b				;bit6 de B em LOW?
+      0001C0 CA C5 01         [10]  354 		jp		z,b5aval		;sim, desvia para avaliar bit5
+      0001C3 CB F7            [ 8]  355 		set		6,a				;não, seta bit 6 de acc
+      0001C5                        356 b5aval:
+      0001C5 CB 68            [ 8]  357 		bit		5,b				;bit5 de B em LOW?
+      0001C7 CA CC 01         [10]  358 		jp		z,b4aval		;sim, desvia para avaliar bit4
+      0001CA CB EF            [ 8]  359 		set		5,a				;não, seta bit 5 de acc
+      0001CC                        360 b4aval:
+      0001CC CB 60            [ 8]  361 		bit		4,b				;bit4 de B em LOW?
+      0001CE CA D3 01         [10]  362 		jp		z,lcd_en		;sim, desvia para pulso de enable
+      0001D1 CB E7            [ 8]  363 		set		4,a				;não, set bit 4 de acc
+      0001D3                        364 lcd_en:
+      0001D3 CB CF            [ 8]  365 		set		EN,a			;pino enable em HIGH
+      0001D5 D3 10            [11]  366 		out		(PORTB),a		;escreve no PORTB 
+      0001D7 16 02            [ 7]  367 		ld		d,#2				;carrega 2d em d 
+      0001D9 CD 29 02         [17]  368 		call    dx1ms           ;aguarda 2ms 
+      0001DC CB 8F            [ 8]  369 		res		EN,a			;pino enable em LOW 
+      0001DE D3 10            [11]  370 		out		(PORTB),a 		;escreve no PORTB 
+      0001E0 16 02            [ 7]  371 		ld		d,#2				;carrega 2d em d
+      0001E2 CD 29 02         [17]  372 		call    dx1ms           ;aguarda 2ms 		
+      0001E5 C9               [10]  373 		ret						;retorno da sub-rotina
+                                    374 		
+                                    375 
+                                    376 ; =============================================================================
+                                    377 ; --- Limpa LCD ---
+      0001E6                        378 lcd_clear:
+      0001E6 06 02            [ 7]  379 		ld		b,#0x02		;return home
+      0001E8 CD 99 01         [17]  380 		call	lcd_cmd			;envia 02h para o LCD
+      0001EB 06 01            [ 7]  381 		ld		b,#0x01		;limpa o display
+      0001ED CD 99 01         [17]  382 		call	lcd_cmd			;envia 01h para o LCD
+      0001F0 C9               [10]  383 		ret						;retorno da sub-rotina		
+                                    384 		
+                                    385 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 8.
+Hexadecimal [24-Bits]
+
+
+
+                                    386 ; =============================================================================
+                                    387 ; --- Imprime o título na segunda linha do LCD ---
+      0001F1                        388 msg_init:
+      0001F1 06 C0            [ 7]  389 		ld		b,#0xC0		;posiciona cursor na linha 1, coluna 0
+      0001F3 CD 99 01         [17]  390 		call	lcd_cmd			;envia comando 
+      0001F6 06 41            [ 7]  391 		ld		b,#'A' 			;imprime "Alpha Z80" 
+      0001F8 CD 9D 01         [17]  392 		call	lcd_write 
+      0001FB 06 6C            [ 7]  393 		ld		b,#'l'
+      0001FD CD 9D 01         [17]  394 		call 	lcd_write 
+      000200 06 70            [ 7]  395 		ld		b,#'p'
+      000202 CD 9D 01         [17]  396 		call 	lcd_write 
+      000205 06 68            [ 7]  397 		ld		b,#'h'
+      000207 CD 9D 01         [17]  398 		call 	lcd_write 
+      00020A 06 61            [ 7]  399 		ld		b,#'a'
+      00020C CD 9D 01         [17]  400 		call 	lcd_write
+      00020F 06 20            [ 7]  401 		ld		b,#' '
+      000211 CD 9D 01         [17]  402 		call 	lcd_write 	
+      000214 06 5A            [ 7]  403 		ld		b,#'Z'
+      000216 CD 9D 01         [17]  404 		call 	lcd_write 
+      000219 06 38            [ 7]  405 		ld		b,#'8'
+      00021B CD 9D 01         [17]  406 		call 	lcd_write 		
+      00021E 06 30            [ 7]  407 		ld		b,#'0'
+      000220 CD 9D 01         [17]  408 		call 	lcd_write 		
+      000223 06 80            [ 7]  409 		ld		b,#0x80		;posiciona cursor na linha 0, coluna 0
+      000225 CD 99 01         [17]  410 		call	lcd_cmd			;envia comando 
+      000228 C9               [10]  411 		ret						;retorna da sub-rotina 
+                                    412 
+                                    413 
+                                    414 ; =============================================================================
+                                    415 ; --- dx1ms multiplies 1ms delay ---	
+      000229                        416 dx1ms:				
+      000229 CD 31 02         [17]  417 		call	d1ms			; 1ms (delay time)
+      00022C 15               [ 4]  418 		dec 	d 				; 1.0µs    4 T States 
+      00022D C2 29 02         [10]  419 		jp 		nz,dx1ms  		; 2.5µs   10 T States 		
+      000230 C9               [10]  420 		ret						; 2.5µs   10 T States 
+                                    421 
+                                    422 
+                                    423 ; =============================================================================
+                                    424 ; --- aprox. 1ms delay (clock 4MHz) ---
+      000231                        425 d1ms:							; 4.25µs  17 T States (call)
+      000231 C5               [11]  426 		push	bc				; 2.75µs  11 T States 
+      000232 06 DB            [ 7]  427 		ld		b,#0xDB			; 1.75 µs  7 T States 
+      000234                        428 dloop:
+      000234 05               [ 4]  429 		dec		b				; 1.0µs    4 T States 
+      000235 00               [ 4]  430 		nop 					; 1.0µs    4 T States 
+      000236 C2 34 02         [10]  431 		jp		nz,dloop		; 2.5µs   10 T States 								
+      000239 C1               [10]  432 		pop		bc				; 2.5µs   10 T States 
+      00023A C9               [10]  433 		ret						; 2.5µs   10 T States 
+                                    434 
+                                    435 
+                                    436 ; =============================================================================
+                                    437 ; --- dx100ms multiplies 100ms delay ---	
+      00023B                        438 dx100ms: 
+      00023B CD 43 02         [17]  439 		call	d100ms			; 1ms (delay time)
+      00023E 15               [ 4]  440 		dec 	d 				; 1.0µs    4 T States 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 9.
+Hexadecimal [24-Bits]
+
+
+
+      00023F C2 3B 02         [10]  441 		jp 		nz,dx100ms 		; 2.5µs   10 T States 	
+      000242 C9               [10]  442 		ret						; 2.5µs   10 T States 
+                                    443 		
+                                    444 		
+                                    445 ; =============================================================================
+                                    446 ; --- aprox. 100ms delay (clock 4MHz) ---
+      000243                        447 d100ms:							; 4.25µs  17 T States
+      000243 C5               [11]  448 		push	bc 				; 2.75µs  11 T States 
+      000244 06 97            [ 7]  449 		ld		b,#0x97			; 1.75µs   7 T States 
+      000246                        450 aux1:
+      000246 0E BD            [ 7]  451 		ld		c,#0xBD			; 1.75µs   7 T States 
+      000248                        452 aux2:
+      000248 0D               [ 4]  453 		dec		c				; 1.0µs    4 T States 
+      000249 C2 48 02         [10]  454 		jp		nz,aux2 		; 2.5µs   10 T States 
+      00024C 05               [ 4]  455 		dec		b 				; 1.0µs    4 T States 
+      00024D C2 46 02         [10]  456 		jp		nz,aux1 		; 2.5µs   10 T States 
+      000250 C1               [10]  457 		pop		bc 				; 2.5µs   10 T States 
+      000251 C9               [10]  458 		ret 					; 2.5µs   10 T States 
+                                    459 
+                                    460 
+                                    461 ;=======================================================
+                                    462 ; --- Final do Programa ---
+                                    463 		.area _DATA
+                                    464 
+                                    465 
+                                    466 		
+                                    467 		

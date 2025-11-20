@@ -1,0 +1,31 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    .__.$$$.=  002710 L   |     .__.ABS.=  000000 G   |     .__.CPU.=  000000 L
+    .__.H$L.=  000000 L   |     BLINE_SC=  008FD8     |     BUNKER1_=  007AA8 
+    BUNKER2_=  007ABF     |     BUNKER3_=  007AD6     |     BUNKER4_=  007AED 
+    BYTES_PE=  0000A0     |     CANNON_S=  008998     |     CANNON_V=  0000DC 
+    INVADERS=  000008     |     INVADER_=  00000B     |     INVADER_=  000037 
+    INVADER_=  000005     |     INV_DIVI=  00000A     |     INV_DIVI=  000226 
+    LEFT_OFF=  000018     |     NUM_BOMB=  000008     |     PLAYFIEL=  0000E0 
+    PLAY_WID=  000070     |     PORTADDR=  000052     |     PORTADDR=  000051 
+    PORTBUTT=  000000     |     PORTDATA=  000050     |     PORTKEY =  000055 
+    PORTMODE=  000053     |     VSTEP   =  00000C     |     VSTEP2  =  000008 
+  2 color      000000 R   |   1 divnum     000000 R   |   1 divnum1    000003 R
+  1 divnum2    00000C R   |   1 font_sta   0000B9 R   |     isr1vect=  004102 
+    isr2vect=  004104     |   1 print_ch   00005D R   |   1 print_nu   000036 GR
+  1 print_st   00001D GR  |   1 printlb1   000077 R   |   1 printlb2   000083 R
+  1 printlb2   000092 R   |   1 printlb2   00009B R   |   1 printlb3   0000AB R
+  1 prints1    000025 R   |   1 procdigi   000010 R   |   2 scraddr    000001 R
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+Area Table
+
+   0 _CODE      size      0   flags    0
+   1 CODE       size    8B9   flags    0
+   2 DATA       size      3   flags    0
+

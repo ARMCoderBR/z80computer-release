@@ -1,0 +1,11 @@
+-mjwx
+-i crt0-kraft80-v2.ihx
+-b _CODE = 0x0040
+-b _DATA = 0x8000
+-k /usr/bin/../share/sdcc/lib/z80
+-k /usr/share/sdcc/lib/z80
+-l z80
+crt0-kraft80-v2.rel
+sysmon.rel
+
+-e

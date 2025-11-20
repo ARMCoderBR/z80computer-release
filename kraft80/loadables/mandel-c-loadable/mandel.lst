@@ -1,0 +1,741 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 4.2.0 #13081 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module mandel
+                                      6 	.optsdcc -mz80
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _main
+                                     12 	.globl _plot2asm
+                                     13 	.globl _plot2
+                                     14 	.globl _plotasm
+                                     15 	.globl _plot
+                                     16 	.globl _video_begin
+                                     17 	.globl _video_in
+                                     18 	.globl _video_out
+                                     19 	.globl _video_setpos
+                                     20 ;--------------------------------------------------------
+                                     21 ; special function registers
+                                     22 ;--------------------------------------------------------
+                                     23 ;--------------------------------------------------------
+                                     24 ; ram data
+                                     25 ;--------------------------------------------------------
+                                     26 	.area _DATA
+                                     27 ;--------------------------------------------------------
+                                     28 ; ram data
+                                     29 ;--------------------------------------------------------
+                                     30 	.area _INITIALIZED
+                                     31 ;--------------------------------------------------------
+                                     32 ; absolute external ram data
+                                     33 ;--------------------------------------------------------
+                                     34 	.area _DABS (ABS)
+                                     35 ;--------------------------------------------------------
+                                     36 ; global & static initialisations
+                                     37 ;--------------------------------------------------------
+                                     38 	.area _HOME
+                                     39 	.area _GSINIT
+                                     40 	.area _GSFINAL
+                                     41 	.area _GSINIT
+                                     42 ;--------------------------------------------------------
+                                     43 ; Home
+                                     44 ;--------------------------------------------------------
+                                     45 	.area _HOME
+                                     46 	.area _HOME
+                                     47 ;--------------------------------------------------------
+                                     48 ; code
+                                     49 ;--------------------------------------------------------
+                                     50 	.area _CODE
+                                     51 ;mandel.c:20: void plot (int x, int y, char color){
+                                     52 ;	---------------------------------
+                                     53 ; Function plot
+                                     54 ; ---------------------------------
+      000000                         55 _plot::
+      000000 DD E5            [15]   56 	push	ix
+      000002 DD 21 00 00      [14]   57 	ld	ix,#0
+      000006 DD 39            [15]   58 	add	ix,sp
+      000008 4D               [ 4]   59 	ld	c, l
+      000009 44               [ 4]   60 	ld	b, h
+      00000A EB               [ 4]   61 	ex	de, hl
+                                     62 ;mandel.c:22: video_setpos(y, x >> 1);
+      00000B 59               [ 4]   63 	ld	e, c
+      00000C 50               [ 4]   64 	ld	d, b
+      00000D CB 2A            [ 8]   65 	sra	d
+      00000F CB 1B            [ 8]   66 	rr	e
+      000011 C5               [11]   67 	push	bc
+      000012 CDr00r00         [17]   68 	call	_video_setpos
+      000015 CDr00r00         [17]   69 	call	_video_in
+      000018 C1               [10]   70 	pop	bc
+                                     71 ;mandel.c:27: b |= (color & 0x0f);
+      000019 DD 6E 04         [19]   72 	ld	l, 4 (ix)
+                                     73 ;	spillPairReg hl
+                                     74 ;	spillPairReg hl
+      00001C 26 00            [ 7]   75 	ld	h, #0x00
+                                     76 ;	spillPairReg hl
+                                     77 ;	spillPairReg hl
+                                     78 ;mandel.c:25: if (x & 1){
+      00001E CB 41            [ 8]   79 	bit	0, c
+      000020 28 0B            [12]   80 	jr	Z, 00102$
+                                     81 ;mandel.c:26: b &= 0xf0;
+      000022 7B               [ 4]   82 	ld	a, e
+      000023 E6 F0            [ 7]   83 	and	a, #0xf0
+      000025 4F               [ 4]   84 	ld	c, a
+                                     85 ;mandel.c:27: b |= (color & 0x0f);
+      000026 7D               [ 4]   86 	ld	a, l
+      000027 E6 0F            [ 7]   87 	and	a, #0x0f
+      000029 B1               [ 4]   88 	or	a,c
+      00002A 4F               [ 4]   89 	ld	c, a
+      00002B 18 0C            [12]   90 	jr	00103$
+      00002D                         91 00102$:
+                                     92 ;mandel.c:30: b &= 0x0f;
+      00002D 7B               [ 4]   93 	ld	a, e
+      00002E E6 0F            [ 7]   94 	and	a, #0x0f
+      000030 5F               [ 4]   95 	ld	e, a
+                                     96 ;mandel.c:31: b |= (color << 4);
+      000031 29               [11]   97 	add	hl, hl
+      000032 29               [11]   98 	add	hl, hl
+      000033 29               [11]   99 	add	hl, hl
+      000034 29               [11]  100 	add	hl, hl
+      000035 4D               [ 4]  101 	ld	c, l
+      000036 7B               [ 4]  102 	ld	a, e
+      000037 B1               [ 4]  103 	or	a, c
+      000038 4F               [ 4]  104 	ld	c, a
+      000039                        105 00103$:
+                                    106 ;mandel.c:34: video_out(b);
+      000039 79               [ 4]  107 	ld	a, c
+      00003A CDr00r00         [17]  108 	call	_video_out
+                                    109 ;mandel.c:35: }
+      00003D DD E1            [14]  110 	pop	ix
+      00003F E1               [10]  111 	pop	hl
+      000040 33               [ 6]  112 	inc	sp
+      000041 E9               [ 4]  113 	jp	(hl)
+                                    114 ;mandel.c:38: void plotasm (int x, int y, char color) __naked __sdcccall(0) {
+                                    115 ;	---------------------------------
+                                    116 ; Function plotasm
+                                    117 ; ---------------------------------
+      000042                        118 _plotasm::
+                                    119 ;mandel.c:103: __endasm;
+      000042 FD 21 02 00      [14]  120 	ld	iy,#2
+      000046 FD 39            [15]  121 	add	iy,sp
+      000048 FD 6E 02         [19]  122 	ld	l,2(iy) ;y
+      00004B FD 66 03         [19]  123 	ld	h,3(iy)
+      00004E CB 25            [ 8]  124 	sla	l ;160 = 128+32
+      000050 CB 14            [ 8]  125 	rl	h
+      000052 CB 25            [ 8]  126 	sla	l
+      000054 CB 14            [ 8]  127 	rl	h
+      000056 CB 25            [ 8]  128 	sla	l
+      000058 CB 14            [ 8]  129 	rl	h
+      00005A CB 25            [ 8]  130 	sla	l
+      00005C CB 14            [ 8]  131 	rl	h
+      00005E CB 25            [ 8]  132 	sla	l
+      000060 CB 14            [ 8]  133 	rl	h
+      000062 4D               [ 4]  134 	ld	c,l ;BC stores the origind hl * 32
+      000063 44               [ 4]  135 	ld	b,h
+      000064 CB 25            [ 8]  136 	sla	l
+      000066 CB 14            [ 8]  137 	rl	h
+      000068 CB 25            [ 8]  138 	sla	l
+      00006A CB 14            [ 8]  139 	rl	h
+      00006C 09               [11]  140 	add	hl,bc ;HL is multiplied by 160
+      00006D FD 4E 00         [19]  141 	ld	c,(iy) ;x
+      000070 FD 46 01         [19]  142 	ld	b,1(iy)
+      000073 CB 38            [ 8]  143 	srl	b ;halves BC
+      000075 CB 19            [ 8]  144 	rr	c
+      000077 09               [11]  145 	add	hl,bc
+      000078 7D               [ 4]  146 	ld	a,l
+      000079 D3 51            [11]  147 	out	(0x51),a
+      00007B 7C               [ 4]  148 	ld	a,h
+      00007C D3 52            [11]  149 	out	(0x52),a
+      00007E DB 50            [11]  150 	in	a,(0x50)
+      000080 FD CB 00 46      [20]  151 	bit	0,(iy)
+      000084 28 0C            [12]  152 	jr	z,plotasm_coleven
+                                    153 ;column	is odd here
+      000086 E6 F0            [ 7]  154 	and	#0xf0
+      000088 47               [ 4]  155 	ld	b,a
+      000089 FD 7E 04         [19]  156 	ld	a,4(iy)
+      00008C E6 0F            [ 7]  157 	and	#0x0f
+      00008E B0               [ 4]  158 	or	b
+      00008F D3 50            [11]  159 	out	(0x50),a
+      000091 C9               [10]  160 	ret
+      000092                        161 	plotasm_coleven:
+      000092 E6 0F            [ 7]  162 	and	#0x0f
+      000094 47               [ 4]  163 	ld	b,a
+      000095 FD 7E 04         [19]  164 	ld	a,4(iy)
+      000098 CB 27            [ 8]  165 	sla	a
+      00009A CB 27            [ 8]  166 	sla	a
+      00009C CB 27            [ 8]  167 	sla	a
+      00009E CB 27            [ 8]  168 	sla	a
+      0000A0 B0               [ 4]  169 	or	b
+      0000A1 D3 50            [11]  170 	out	(0x50),a
+      0000A3 C9               [10]  171 	ret
+                                    172 ;mandel.c:104: }
+                                    173 ;mandel.c:107: void plot2 (int x, int y, char color){
+                                    174 ;	---------------------------------
+                                    175 ; Function plot2
+                                    176 ; ---------------------------------
+      0000A4                        177 _plot2::
+      0000A4 DD E5            [15]  178 	push	ix
+      0000A6 DD 21 00 00      [14]  179 	ld	ix,#0
+      0000AA DD 39            [15]  180 	add	ix,sp
+      0000AC F5               [11]  181 	push	af
+      0000AD 3B               [ 6]  182 	dec	sp
+      0000AE 4D               [ 4]  183 	ld	c, l
+      0000AF 44               [ 4]  184 	ld	b, h
+      0000B0 DD 73 FE         [19]  185 	ld	-2 (ix), e
+      0000B3 DD 72 FF         [19]  186 	ld	-1 (ix), d
+                                    187 ;mandel.c:109: int b = color << 4; b |= (color & 0x0f);
+      0000B6 DD 7E 04         [19]  188 	ld	a, 4 (ix)
+      0000B9 16 00            [ 7]  189 	ld	d, #0x00
+      0000BB 6F               [ 4]  190 	ld	l, a
+      0000BC 62               [ 4]  191 	ld	h, d
+      0000BD 29               [11]  192 	add	hl, hl
+      0000BE 29               [11]  193 	add	hl, hl
+      0000BF 29               [11]  194 	add	hl, hl
+      0000C0 29               [11]  195 	add	hl, hl
+      0000C1 E6 0F            [ 7]  196 	and	a, #0x0f
+      0000C3 5F               [ 4]  197 	ld	e, a
+      0000C4 16 00            [ 7]  198 	ld	d, #0x00
+      0000C6 7D               [ 4]  199 	ld	a, l
+      0000C7 B3               [ 4]  200 	or	a, e
+      0000C8 6F               [ 4]  201 	ld	l, a
+                                    202 ;	spillPairReg hl
+                                    203 ;	spillPairReg hl
+      0000C9 7C               [ 4]  204 	ld	a, h
+      0000CA B2               [ 4]  205 	or	a, d
+      0000CB 67               [ 4]  206 	ld	h, a
+                                    207 ;	spillPairReg hl
+                                    208 ;	spillPairReg hl
+                                    209 ;mandel.c:111: video_setpos(y, x >> 1);
+      0000CC CB 28            [ 8]  210 	sra	b
+      0000CE CB 19            [ 8]  211 	rr	c
+      0000D0 E5               [11]  212 	push	hl
+      0000D1 C5               [11]  213 	push	bc
+      0000D2 59               [ 4]  214 	ld	e, c
+      0000D3 50               [ 4]  215 	ld	d, b
+      0000D4 DD 6E FE         [19]  216 	ld	l, -2 (ix)
+                                    217 ;	spillPairReg hl
+                                    218 ;	spillPairReg hl
+      0000D7 DD 66 FF         [19]  219 	ld	h, -1 (ix)
+                                    220 ;	spillPairReg hl
+                                    221 ;	spillPairReg hl
+      0000DA CDr00r00         [17]  222 	call	_video_setpos
+      0000DD C1               [10]  223 	pop	bc
+      0000DE E1               [10]  224 	pop	hl
+                                    225 ;mandel.c:112: video_out(b);
+      0000DF DD 75 FD         [19]  226 	ld	-3 (ix), l
+      0000E2 C5               [11]  227 	push	bc
+      0000E3 DD 7E FD         [19]  228 	ld	a, -3 (ix)
+      0000E6 CDr00r00         [17]  229 	call	_video_out
+      0000E9 C1               [10]  230 	pop	bc
+                                    231 ;mandel.c:113: video_setpos(y+1, x >> 1);
+      0000EA DD 6E FE         [19]  232 	ld	l, -2 (ix)
+                                    233 ;	spillPairReg hl
+                                    234 ;	spillPairReg hl
+      0000ED DD 66 FF         [19]  235 	ld	h, -1 (ix)
+                                    236 ;	spillPairReg hl
+                                    237 ;	spillPairReg hl
+      0000F0 23               [ 6]  238 	inc	hl
+      0000F1 59               [ 4]  239 	ld	e, c
+      0000F2 50               [ 4]  240 	ld	d, b
+      0000F3 CDr00r00         [17]  241 	call	_video_setpos
+                                    242 ;mandel.c:114: video_out(b);
+      0000F6 DD 7E FD         [19]  243 	ld	a, -3 (ix)
+      0000F9 CDr00r00         [17]  244 	call	_video_out
+                                    245 ;mandel.c:115: }
+      0000FC DD F9            [10]  246 	ld	sp, ix
+      0000FE DD E1            [14]  247 	pop	ix
+      000100 E1               [10]  248 	pop	hl
+      000101 33               [ 6]  249 	inc	sp
+      000102 E9               [ 4]  250 	jp	(hl)
+                                    251 ;mandel.c:118: void plot2asm (int x, int y, char color) __naked __sdcccall(0) {
+                                    252 ;	---------------------------------
+                                    253 ; Function plot2asm
+                                    254 ; ---------------------------------
+      000103                        255 _plot2asm::
+                                    256 ;mandel.c:180: __endasm;
+      000103 FD 21 02 00      [14]  257 	ld	iy,#2
+      000107 FD 39            [15]  258 	add	iy,sp
+      000109 FD 6E 02         [19]  259 	ld	l,2(iy) ;y
+      00010C FD 66 03         [19]  260 	ld	h,3(iy)
+      00010F CB 25            [ 8]  261 	sla	l ;160 = 128+32
+      000111 CB 14            [ 8]  262 	rl	h
+      000113 CB 25            [ 8]  263 	sla	l
+      000115 CB 14            [ 8]  264 	rl	h
+      000117 CB 25            [ 8]  265 	sla	l
+      000119 CB 14            [ 8]  266 	rl	h
+      00011B CB 25            [ 8]  267 	sla	l
+      00011D CB 14            [ 8]  268 	rl	h
+      00011F CB 25            [ 8]  269 	sla	l
+      000121 CB 14            [ 8]  270 	rl	h
+      000123 4D               [ 4]  271 	ld	c,l ;BC stores the origind hl * 32
+      000124 44               [ 4]  272 	ld	b,h
+      000125 CB 25            [ 8]  273 	sla	l
+      000127 CB 14            [ 8]  274 	rl	h
+      000129 CB 25            [ 8]  275 	sla	l
+      00012B CB 14            [ 8]  276 	rl	h
+      00012D 09               [11]  277 	add	hl,bc ;HL is multiplied by 160
+      00012E FD 4E 00         [19]  278 	ld	c,(iy) ;x
+      000131 FD 46 01         [19]  279 	ld	b,1(iy)
+      000134 CB 38            [ 8]  280 	srl	b ;halves BC
+      000136 CB 19            [ 8]  281 	rr	c
+      000138 09               [11]  282 	add	hl,bc
+      000139 7D               [ 4]  283 	ld	a,l
+      00013A D3 51            [11]  284 	out	(0x51),a
+      00013C 7C               [ 4]  285 	ld	a,h
+      00013D D3 52            [11]  286 	out	(0x52),a
+      00013F FD 7E 04         [19]  287 	ld	a,4(iy)
+      000142 E6 0F            [ 7]  288 	and	#0x0f
+      000144 5F               [ 4]  289 	ld	e,a
+      000145 CB 27            [ 8]  290 	sla	a
+      000147 CB 27            [ 8]  291 	sla	a
+      000149 CB 27            [ 8]  292 	sla	a
+      00014B CB 27            [ 8]  293 	sla	a
+      00014D B3               [ 4]  294 	or	e
+      00014E 5F               [ 4]  295 	ld	e,a ;E = new color
+      00014F D3 50            [11]  296 	out	(0x50),a
+      000151 01 A0 00         [10]  297 	ld	bc,#160
+      000154 09               [11]  298 	add	hl,bc
+      000155 7D               [ 4]  299 	ld	a,l
+      000156 D3 51            [11]  300 	out	(0x51),a
+      000158 7C               [ 4]  301 	ld	a,h
+      000159 D3 52            [11]  302 	out	(0x52),a
+      00015B 7B               [ 4]  303 	ld	a,e
+      00015C D3 50            [11]  304 	out	(0x50),a
+      00015E C9               [10]  305 	ret
+                                    306 ;mandel.c:181: }
+                                    307 ;mandel.c:184: void main (void){
+                                    308 ;	---------------------------------
+                                    309 ; Function main
+                                    310 ; ---------------------------------
+      00015F                        311 _main::
+      00015F CDr00r00         [17]  312 	call	___sdcc_enter_ix
+      000162 21 E6 FF         [10]  313 	ld	hl, #-26
+      000165 39               [11]  314 	add	hl, sp
+      000166 F9               [ 6]  315 	ld	sp, hl
+                                    316 ;mandel.c:186: video_begin(1);
+      000167 21 01 00         [10]  317 	ld	hl, #0x0001
+      00016A CDr00r00         [17]  318 	call	_video_begin
+                                    319 ;mandel.c:199: for (iy = 0; iy < 240; iy+=step){
+      00016D 01 00 00         [10]  320 	ld	bc, #0x0000
+                                    321 ;mandel.c:201: for (ix = 0; ix < 320; ix+=step){
+      000170                        322 00136$:
+      000170 11 00 00         [10]  323 	ld	de, #0x0000
+      000173                        324 00120$:
+                                    325 ;mandel.c:203: x0 = ((float)ix - X0)/SCALE;
+      000173 C5               [11]  326 	push	bc
+                                    327 ;	spillPairReg hl
+                                    328 ;	spillPairReg hl
+      000174 EB               [ 4]  329 	ex	de, hl
+      000175 E5               [11]  330 	push	hl
+                                    331 ;	spillPairReg hl
+                                    332 ;	spillPairReg hl
+      000176 CDr00r00         [17]  333 	call	___sint2fs
+      000179 D5               [11]  334 	push	de
+      00017A FD E1            [14]  335 	pop	iy
+      00017C E5               [11]  336 	push	hl
+      00017D 21 20 43         [10]  337 	ld	hl, #0x4320
+      000180 E3               [19]  338 	ex	(sp), hl
+      000181 E5               [11]  339 	push	hl
+      000182 21 00 00         [10]  340 	ld	hl, #0x0000
+      000185 E3               [19]  341 	ex	(sp), hl
+      000186 FD E5            [15]  342 	push	iy
+      000188 D1               [10]  343 	pop	de
+      000189 CDr00r00         [17]  344 	call	___fssub
+      00018C D5               [11]  345 	push	de
+      00018D FD E1            [14]  346 	pop	iy
+      00018F E5               [11]  347 	push	hl
+      000190 21 A0 42         [10]  348 	ld	hl, #0x42a0
+      000193 E3               [19]  349 	ex	(sp), hl
+      000194 E5               [11]  350 	push	hl
+      000195 21 00 00         [10]  351 	ld	hl, #0x0000
+      000198 E3               [19]  352 	ex	(sp), hl
+      000199 FD E5            [15]  353 	push	iy
+      00019B D1               [10]  354 	pop	de
+      00019C CDr00r00         [17]  355 	call	___fsdiv
+      00019F D5               [11]  356 	push	de
+      0001A0 FD E1            [14]  357 	pop	iy
+      0001A2 D1               [10]  358 	pop	de
+      0001A3 C1               [10]  359 	pop	bc
+      0001A4 33               [ 6]  360 	inc	sp
+      0001A5 33               [ 6]  361 	inc	sp
+      0001A6 FD E5            [15]  362 	push	iy
+      0001A8 DD 75 E8         [19]  363 	ld	-24 (ix), l
+      0001AB DD 74 E9         [19]  364 	ld	-23 (ix), h
+                                    365 ;mandel.c:204: y0 = ((float)iy - Y0)/SCALE;
+      0001AE C5               [11]  366 	push	bc
+      0001AF D5               [11]  367 	push	de
+      0001B0 69               [ 4]  368 	ld	l, c
+                                    369 ;	spillPairReg hl
+                                    370 ;	spillPairReg hl
+      0001B1 60               [ 4]  371 	ld	h, b
+                                    372 ;	spillPairReg hl
+                                    373 ;	spillPairReg hl
+      0001B2 CDr00r00         [17]  374 	call	___sint2fs
+      0001B5 D5               [11]  375 	push	de
+      0001B6 FD E1            [14]  376 	pop	iy
+      0001B8 E5               [11]  377 	push	hl
+      0001B9 21 F0 42         [10]  378 	ld	hl, #0x42f0
+      0001BC E3               [19]  379 	ex	(sp), hl
+      0001BD E5               [11]  380 	push	hl
+      0001BE 21 00 00         [10]  381 	ld	hl, #0x0000
+      0001C1 E3               [19]  382 	ex	(sp), hl
+      0001C2 FD E5            [15]  383 	push	iy
+      0001C4 D1               [10]  384 	pop	de
+      0001C5 CDr00r00         [17]  385 	call	___fssub
+      0001C8 D5               [11]  386 	push	de
+      0001C9 FD E1            [14]  387 	pop	iy
+      0001CB E5               [11]  388 	push	hl
+      0001CC 21 A0 42         [10]  389 	ld	hl, #0x42a0
+      0001CF E3               [19]  390 	ex	(sp), hl
+      0001D0 E5               [11]  391 	push	hl
+      0001D1 21 00 00         [10]  392 	ld	hl, #0x0000
+      0001D4 E3               [19]  393 	ex	(sp), hl
+      0001D5 FD E5            [15]  394 	push	iy
+      0001D7 D1               [10]  395 	pop	de
+      0001D8 CDr00r00         [17]  396 	call	___fsdiv
+      0001DB D5               [11]  397 	push	de
+      0001DC FD E1            [14]  398 	pop	iy
+      0001DE D1               [10]  399 	pop	de
+      0001DF C1               [10]  400 	pop	bc
+      0001E0 FD E5            [15]  401 	push	iy
+      0001E2 E3               [19]  402 	ex	(sp), hl
+      0001E3 DD 75 EA         [19]  403 	ld	-22 (ix), l
+      0001E6 E3               [19]  404 	ex	(sp), hl
+      0001E7 E3               [19]  405 	ex	(sp), hl
+      0001E8 DD 74 EB         [19]  406 	ld	-21 (ix), h
+      0001EB E3               [19]  407 	ex	(sp), hl
+      0001EC FD E1            [14]  408 	pop	iy
+      0001EE DD 75 EC         [19]  409 	ld	-20 (ix), l
+      0001F1 DD 74 ED         [19]  410 	ld	-19 (ix), h
+                                    411 ;mandel.c:205: x = 0.0;
+      0001F4 AF               [ 4]  412 	xor	a, a
+      0001F5 DD 77 EE         [19]  413 	ld	-18 (ix), a
+      0001F8 DD 77 EF         [19]  414 	ld	-17 (ix), a
+      0001FB DD 77 F0         [19]  415 	ld	-16 (ix), a
+      0001FE DD 77 F1         [19]  416 	ld	-15 (ix), a
+                                    417 ;mandel.c:206: y = 0.0;
+      000201 AF               [ 4]  418 	xor	a, a
+      000202 DD 77 F2         [19]  419 	ld	-14 (ix), a
+      000205 DD 77 F3         [19]  420 	ld	-13 (ix), a
+      000208 DD 77 F4         [19]  421 	ld	-12 (ix), a
+      00020B DD 77 F5         [19]  422 	ld	-11 (ix), a
+                                    423 ;mandel.c:209: while (itcount < ITMAX) {
+      00020E AF               [ 4]  424 	xor	a, a
+      00020F DD 77 FE         [19]  425 	ld	-2 (ix), a
+      000212 DD 77 FF         [19]  426 	ld	-1 (ix), a
+      000215                        427 00103$:
+      000215 DD 7E FE         [19]  428 	ld	a, -2 (ix)
+      000218 D6 0F            [ 7]  429 	sub	a, #0x0f
+      00021A DD 7E FF         [19]  430 	ld	a, -1 (ix)
+      00021D 17               [ 4]  431 	rla
+      00021E 3F               [ 4]  432 	ccf
+      00021F 1F               [ 4]  433 	rra
+      000220 DE 80            [ 7]  434 	sbc	a, #0x80
+      000222 D2r98r03         [10]  435 	jp	NC, 00105$
+                                    436 ;mandel.c:211: xx = x*x;
+      000225 C5               [11]  437 	push	bc
+      000226 D5               [11]  438 	push	de
+      000227 DD 6E F0         [19]  439 	ld	l, -16 (ix)
+                                    440 ;	spillPairReg hl
+                                    441 ;	spillPairReg hl
+      00022A DD 66 F1         [19]  442 	ld	h, -15 (ix)
+                                    443 ;	spillPairReg hl
+                                    444 ;	spillPairReg hl
+      00022D E5               [11]  445 	push	hl
+      00022E DD 6E EE         [19]  446 	ld	l, -18 (ix)
+                                    447 ;	spillPairReg hl
+                                    448 ;	spillPairReg hl
+      000231 DD 66 EF         [19]  449 	ld	h, -17 (ix)
+                                    450 ;	spillPairReg hl
+                                    451 ;	spillPairReg hl
+      000234 E5               [11]  452 	push	hl
+      000235 DD 5E EE         [19]  453 	ld	e, -18 (ix)
+      000238 DD 56 EF         [19]  454 	ld	d, -17 (ix)
+      00023B DD 6E F0         [19]  455 	ld	l, -16 (ix)
+                                    456 ;	spillPairReg hl
+                                    457 ;	spillPairReg hl
+      00023E DD 66 F1         [19]  458 	ld	h, -15 (ix)
+                                    459 ;	spillPairReg hl
+                                    460 ;	spillPairReg hl
+      000241 CDr00r00         [17]  461 	call	___fsmul
+      000244 D5               [11]  462 	push	de
+      000245 FD E1            [14]  463 	pop	iy
+      000247 D1               [10]  464 	pop	de
+      000248 C1               [10]  465 	pop	bc
+      000249 FD E5            [15]  466 	push	iy
+      00024B E3               [19]  467 	ex	(sp), hl
+      00024C DD 75 F6         [19]  468 	ld	-10 (ix), l
+      00024F E3               [19]  469 	ex	(sp), hl
+      000250 E3               [19]  470 	ex	(sp), hl
+      000251 DD 74 F7         [19]  471 	ld	-9 (ix), h
+      000254 E3               [19]  472 	ex	(sp), hl
+      000255 FD E1            [14]  473 	pop	iy
+      000257 DD 75 F8         [19]  474 	ld	-8 (ix), l
+      00025A DD 74 F9         [19]  475 	ld	-7 (ix), h
+                                    476 ;mandel.c:212: yy = y*y;
+      00025D C5               [11]  477 	push	bc
+      00025E D5               [11]  478 	push	de
+      00025F DD 6E F4         [19]  479 	ld	l, -12 (ix)
+                                    480 ;	spillPairReg hl
+                                    481 ;	spillPairReg hl
+      000262 DD 66 F5         [19]  482 	ld	h, -11 (ix)
+                                    483 ;	spillPairReg hl
+                                    484 ;	spillPairReg hl
+      000265 E5               [11]  485 	push	hl
+      000266 DD 6E F2         [19]  486 	ld	l, -14 (ix)
+                                    487 ;	spillPairReg hl
+                                    488 ;	spillPairReg hl
+      000269 DD 66 F3         [19]  489 	ld	h, -13 (ix)
+                                    490 ;	spillPairReg hl
+                                    491 ;	spillPairReg hl
+      00026C E5               [11]  492 	push	hl
+      00026D DD 5E F2         [19]  493 	ld	e, -14 (ix)
+      000270 DD 56 F3         [19]  494 	ld	d, -13 (ix)
+      000273 DD 6E F4         [19]  495 	ld	l, -12 (ix)
+                                    496 ;	spillPairReg hl
+                                    497 ;	spillPairReg hl
+      000276 DD 66 F5         [19]  498 	ld	h, -11 (ix)
+                                    499 ;	spillPairReg hl
+                                    500 ;	spillPairReg hl
+      000279 CDr00r00         [17]  501 	call	___fsmul
+      00027C D5               [11]  502 	push	de
+      00027D FD E1            [14]  503 	pop	iy
+      00027F D1               [10]  504 	pop	de
+      000280 C1               [10]  505 	pop	bc
+                                    506 ;mandel.c:214: if (xx + yy > 4.0)
+      000281 E5               [11]  507 	push	hl
+      000282 C5               [11]  508 	push	bc
+      000283 D5               [11]  509 	push	de
+      000284 FD E5            [15]  510 	push	iy
+      000286 E5               [11]  511 	push	hl
+      000287 FD E5            [15]  512 	push	iy
+      000289 DD 5E F6         [19]  513 	ld	e, -10 (ix)
+      00028C DD 56 F7         [19]  514 	ld	d, -9 (ix)
+      00028F DD 6E F8         [19]  515 	ld	l, -8 (ix)
+                                    516 ;	spillPairReg hl
+                                    517 ;	spillPairReg hl
+      000292 DD 66 F9         [19]  518 	ld	h, -7 (ix)
+                                    519 ;	spillPairReg hl
+                                    520 ;	spillPairReg hl
+      000295 CDr00r00         [17]  521 	call	___fsadd
+      000298 DD 73 FA         [19]  522 	ld	-6 (ix), e
+      00029B DD 72 FB         [19]  523 	ld	-5 (ix), d
+      00029E DD 75 FC         [19]  524 	ld	-4 (ix), l
+      0002A1 DD 74 FD         [19]  525 	ld	-3 (ix), h
+      0002A4 FD E1            [14]  526 	pop	iy
+      0002A6 D1               [10]  527 	pop	de
+      0002A7 C1               [10]  528 	pop	bc
+      0002A8 E1               [10]  529 	pop	hl
+      0002A9 E5               [11]  530 	push	hl
+      0002AA C5               [11]  531 	push	bc
+      0002AB D5               [11]  532 	push	de
+      0002AC FD E5            [15]  533 	push	iy
+      0002AE E5               [11]  534 	push	hl
+      0002AF DD 6E FC         [19]  535 	ld	l, -4 (ix)
+                                    536 ;	spillPairReg hl
+                                    537 ;	spillPairReg hl
+      0002B2 DD 66 FD         [19]  538 	ld	h, -3 (ix)
+                                    539 ;	spillPairReg hl
+                                    540 ;	spillPairReg hl
+      0002B5 E3               [19]  541 	ex	(sp), hl
+      0002B6 E5               [11]  542 	push	hl
+      0002B7 DD 6E FA         [19]  543 	ld	l, -6 (ix)
+                                    544 ;	spillPairReg hl
+                                    545 ;	spillPairReg hl
+      0002BA DD 66 FB         [19]  546 	ld	h, -5 (ix)
+                                    547 ;	spillPairReg hl
+                                    548 ;	spillPairReg hl
+      0002BD E3               [19]  549 	ex	(sp), hl
+      0002BE 11 00 00         [10]  550 	ld	de, #0x0000
+      0002C1 21 80 40         [10]  551 	ld	hl, #0x4080
+      0002C4 CDr00r00         [17]  552 	call	___fslt
+      0002C7 FD E1            [14]  553 	pop	iy
+      0002C9 D1               [10]  554 	pop	de
+      0002CA C1               [10]  555 	pop	bc
+      0002CB E1               [10]  556 	pop	hl
+      0002CC B7               [ 4]  557 	or	a, a
+      0002CD C2r98r03         [10]  558 	jp	NZ, 00105$
+                                    559 ;mandel.c:217: xtemp = xx-yy+x0;
+      0002D0 C5               [11]  560 	push	bc
+      0002D1 D5               [11]  561 	push	de
+      0002D2 E5               [11]  562 	push	hl
+      0002D3 FD E5            [15]  563 	push	iy
+      0002D5 DD 5E F6         [19]  564 	ld	e, -10 (ix)
+      0002D8 DD 56 F7         [19]  565 	ld	d, -9 (ix)
+      0002DB DD 6E F8         [19]  566 	ld	l, -8 (ix)
+                                    567 ;	spillPairReg hl
+                                    568 ;	spillPairReg hl
+      0002DE DD 66 F9         [19]  569 	ld	h, -7 (ix)
+                                    570 ;	spillPairReg hl
+                                    571 ;	spillPairReg hl
+      0002E1 CDr00r00         [17]  572 	call	___fssub
+      0002E4 D5               [11]  573 	push	de
+      0002E5 FD E1            [14]  574 	pop	iy
+      0002E7 E5               [11]  575 	push	hl
+      0002E8 DD 6E E8         [19]  576 	ld	l, -24 (ix)
+                                    577 ;	spillPairReg hl
+                                    578 ;	spillPairReg hl
+      0002EB DD 66 E9         [19]  579 	ld	h, -23 (ix)
+                                    580 ;	spillPairReg hl
+                                    581 ;	spillPairReg hl
+      0002EE E3               [19]  582 	ex	(sp), hl
+      0002EF E5               [11]  583 	push	hl
+      0002F0 DD 6E E6         [19]  584 	ld	l, -26 (ix)
+                                    585 ;	spillPairReg hl
+                                    586 ;	spillPairReg hl
+      0002F3 DD 66 E7         [19]  587 	ld	h, -25 (ix)
+                                    588 ;	spillPairReg hl
+                                    589 ;	spillPairReg hl
+      0002F6 E3               [19]  590 	ex	(sp), hl
+      0002F7 FD E5            [15]  591 	push	iy
+      0002F9 D1               [10]  592 	pop	de
+      0002FA CDr00r00         [17]  593 	call	___fsadd
+      0002FD D5               [11]  594 	push	de
+      0002FE FD E1            [14]  595 	pop	iy
+      000300 D1               [10]  596 	pop	de
+      000301 C1               [10]  597 	pop	bc
+      000302 FD E5            [15]  598 	push	iy
+      000304 E3               [19]  599 	ex	(sp), hl
+      000305 DD 75 FA         [19]  600 	ld	-6 (ix), l
+      000308 E3               [19]  601 	ex	(sp), hl
+      000309 E3               [19]  602 	ex	(sp), hl
+      00030A DD 74 FB         [19]  603 	ld	-5 (ix), h
+      00030D E3               [19]  604 	ex	(sp), hl
+      00030E FD E1            [14]  605 	pop	iy
+      000310 DD 75 FC         [19]  606 	ld	-4 (ix), l
+      000313 DD 74 FD         [19]  607 	ld	-3 (ix), h
+                                    608 ;mandel.c:218: y = 2 * x*y + y0;
+      000316 C5               [11]  609 	push	bc
+      000317 D5               [11]  610 	push	de
+      000318 DD 6E F0         [19]  611 	ld	l, -16 (ix)
+                                    612 ;	spillPairReg hl
+                                    613 ;	spillPairReg hl
+      00031B DD 66 F1         [19]  614 	ld	h, -15 (ix)
+                                    615 ;	spillPairReg hl
+                                    616 ;	spillPairReg hl
+      00031E E5               [11]  617 	push	hl
+      00031F DD 6E EE         [19]  618 	ld	l, -18 (ix)
+                                    619 ;	spillPairReg hl
+                                    620 ;	spillPairReg hl
+      000322 DD 66 EF         [19]  621 	ld	h, -17 (ix)
+                                    622 ;	spillPairReg hl
+                                    623 ;	spillPairReg hl
+      000325 E5               [11]  624 	push	hl
+      000326 11 00 00         [10]  625 	ld	de, #0x0000
+      000329 21 00 40         [10]  626 	ld	hl, #0x4000
+      00032C CDr00r00         [17]  627 	call	___fsmul
+      00032F D5               [11]  628 	push	de
+      000330 FD E1            [14]  629 	pop	iy
+      000332 E5               [11]  630 	push	hl
+      000333 DD 6E F4         [19]  631 	ld	l, -12 (ix)
+                                    632 ;	spillPairReg hl
+                                    633 ;	spillPairReg hl
+      000336 DD 66 F5         [19]  634 	ld	h, -11 (ix)
+                                    635 ;	spillPairReg hl
+                                    636 ;	spillPairReg hl
+      000339 E3               [19]  637 	ex	(sp), hl
+      00033A E5               [11]  638 	push	hl
+      00033B DD 6E F2         [19]  639 	ld	l, -14 (ix)
+                                    640 ;	spillPairReg hl
+                                    641 ;	spillPairReg hl
+      00033E DD 66 F3         [19]  642 	ld	h, -13 (ix)
+                                    643 ;	spillPairReg hl
+                                    644 ;	spillPairReg hl
+      000341 E3               [19]  645 	ex	(sp), hl
+      000342 FD E5            [15]  646 	push	iy
+      000344 D1               [10]  647 	pop	de
+      000345 CDr00r00         [17]  648 	call	___fsmul
+      000348 D5               [11]  649 	push	de
+      000349 FD E1            [14]  650 	pop	iy
+      00034B E5               [11]  651 	push	hl
+      00034C DD 6E EC         [19]  652 	ld	l, -20 (ix)
+                                    653 ;	spillPairReg hl
+                                    654 ;	spillPairReg hl
+      00034F DD 66 ED         [19]  655 	ld	h, -19 (ix)
+                                    656 ;	spillPairReg hl
+                                    657 ;	spillPairReg hl
+      000352 E3               [19]  658 	ex	(sp), hl
+      000353 E5               [11]  659 	push	hl
+      000354 DD 6E EA         [19]  660 	ld	l, -22 (ix)
+                                    661 ;	spillPairReg hl
+                                    662 ;	spillPairReg hl
+      000357 DD 66 EB         [19]  663 	ld	h, -21 (ix)
+                                    664 ;	spillPairReg hl
+                                    665 ;	spillPairReg hl
+      00035A E3               [19]  666 	ex	(sp), hl
+      00035B FD E5            [15]  667 	push	iy
+      00035D D1               [10]  668 	pop	de
+      00035E CDr00r00         [17]  669 	call	___fsadd
+      000361 D5               [11]  670 	push	de
+      000362 FD E1            [14]  671 	pop	iy
+      000364 D1               [10]  672 	pop	de
+      000365 C1               [10]  673 	pop	bc
+      000366 FD E5            [15]  674 	push	iy
+      000368 E3               [19]  675 	ex	(sp), hl
+      000369 DD 75 F2         [19]  676 	ld	-14 (ix), l
+      00036C E3               [19]  677 	ex	(sp), hl
+      00036D E3               [19]  678 	ex	(sp), hl
+      00036E DD 74 F3         [19]  679 	ld	-13 (ix), h
+      000371 E3               [19]  680 	ex	(sp), hl
+      000372 FD E1            [14]  681 	pop	iy
+      000374 DD 75 F4         [19]  682 	ld	-12 (ix), l
+      000377 DD 74 F5         [19]  683 	ld	-11 (ix), h
+                                    684 ;mandel.c:219: x = xtemp;
+      00037A D5               [11]  685 	push	de
+      00037B C5               [11]  686 	push	bc
+      00037C 21 0C 00         [10]  687 	ld	hl, #12
+      00037F 39               [11]  688 	add	hl, sp
+      000380 EB               [ 4]  689 	ex	de, hl
+      000381 21 18 00         [10]  690 	ld	hl, #24
+      000384 39               [11]  691 	add	hl, sp
+      000385 01 04 00         [10]  692 	ld	bc, #4
+      000388 ED B0            [21]  693 	ldir
+      00038A C1               [10]  694 	pop	bc
+      00038B D1               [10]  695 	pop	de
+                                    696 ;mandel.c:220: itcount++;
+      00038C DD 34 FE         [23]  697 	inc	-2 (ix)
+      00038F C2r15r02         [10]  698 	jp	NZ,00103$
+      000392 DD 34 FF         [23]  699 	inc	-1 (ix)
+      000395 C3r15r02         [10]  700 	jp	00103$
+      000398                        701 00105$:
+                                    702 ;mandel.c:224: plotasm (ix, iy, itcount);
+      000398 DD 7E FE         [19]  703 	ld	a, -2 (ix)
+      00039B C5               [11]  704 	push	bc
+      00039C D5               [11]  705 	push	de
+      00039D F5               [11]  706 	push	af
+      00039E 33               [ 6]  707 	inc	sp
+      00039F C5               [11]  708 	push	bc
+      0003A0 D5               [11]  709 	push	de
+      0003A1 CDr42r00         [17]  710 	call	_plotasm
+      0003A4 F1               [10]  711 	pop	af
+      0003A5 F1               [10]  712 	pop	af
+      0003A6 33               [ 6]  713 	inc	sp
+      0003A7 D1               [10]  714 	pop	de
+      0003A8 C1               [10]  715 	pop	bc
+                                    716 ;mandel.c:201: for (ix = 0; ix < 320; ix+=step){
+      0003A9 13               [ 6]  717 	inc	de
+      0003AA 7B               [ 4]  718 	ld	a, e
+      0003AB D6 40            [ 7]  719 	sub	a, #0x40
+      0003AD 7A               [ 4]  720 	ld	a, d
+      0003AE 17               [ 4]  721 	rla
+      0003AF 3F               [ 4]  722 	ccf
+      0003B0 1F               [ 4]  723 	rra
+      0003B1 DE 81            [ 7]  724 	sbc	a, #0x81
+      0003B3 DAr73r01         [10]  725 	jp	C, 00120$
+                                    726 ;mandel.c:199: for (iy = 0; iy < 240; iy+=step){
+      0003B6 03               [ 6]  727 	inc	bc
+      0003B7 79               [ 4]  728 	ld	a, c
+      0003B8 D6 F0            [ 7]  729 	sub	a, #0xf0
+      0003BA 78               [ 4]  730 	ld	a, b
+      0003BB 17               [ 4]  731 	rla
+      0003BC 3F               [ 4]  732 	ccf
+      0003BD 1F               [ 4]  733 	rra
+      0003BE DE 80            [ 7]  734 	sbc	a, #0x80
+      0003C0 DAr70r01         [10]  735 	jp	C, 00136$
+      0003C3                        736 00125$:
+                                    737 ;mandel.c:234: }
+      0003C3 18 FE            [12]  738 	jr	00125$
+                                    739 	.area _CODE
+                                    740 	.area _INITIALIZER
+                                    741 	.area _CABS (ABS)

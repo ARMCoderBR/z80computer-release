@@ -29,7 +29,8 @@
 ;;;-----------------------------------------------------------------------
 ;;; BOOT CODE
 ;;; INTERRUPT HANDLERS & VECTORS
-;;; HARDWARE DRIVERS FOR 8251/8259
+;;; HARDWARE DRIVERS FOR THE TANG NANO HARDWARE:
+;;;    SERIAL & TIMER (NO ROM LEFT TO DRIVE THE VIDEO AND PS2 KBD!)
 ;;;    BY ARMCODER - 2025
 ;;;-----------------------------------------------------------------------
 

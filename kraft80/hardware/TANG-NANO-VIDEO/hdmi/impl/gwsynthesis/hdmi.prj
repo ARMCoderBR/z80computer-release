@@ -4,32 +4,32 @@
     <Version>beta</Version>
     <Device id="GW1NR-9C" package="QFN88P" speed="6" partNumber="GW1NR-LV9QN88PC6/I5"/>
     <FileList>
-        <File path="Z:\hdmi\src\PS2_module.v" type="verilog"/>
-        <File path="Z:\hdmi\src\SERIAL_module.v" type="verilog"/>
-        <File path="Z:\hdmi\src\SOUND_module.v" type="verilog"/>
-        <File path="Z:\hdmi\src\SPI_module.v" type="verilog"/>
-        <File path="Z:\hdmi\src\TIMER_module.v" type="verilog"/>
-        <File path="Z:\hdmi\src\gowin_clkdiv\gowin_clkdiv.v" type="verilog"/>
-        <File path="Z:\hdmi\src\gowin_dpb\gowin_dpb.v" type="verilog"/>
-        <File path="Z:\hdmi\src\gowin_rpll\gowin_rpll.v" type="verilog"/>
-        <File path="Z:\hdmi\src\hdmi\svo_defines.vh" type="verilog"/>
-        <File path="Z:\hdmi\src\hdmi\svo_enc.v" type="verilog"/>
-        <File path="Z:\hdmi\src\hdmi\svo_openldi.v" type="verilog"/>
-        <File path="Z:\hdmi\src\hdmi\svo_tcard.v" type="verilog"/>
-        <File path="Z:\hdmi\src\hdmi\svo_term.v" type="verilog"/>
-        <File path="Z:\hdmi\src\hdmi\svo_tmds.v" type="verilog"/>
-        <File path="Z:\hdmi\src\hdmi\svo_utils.v" type="verilog"/>
-        <File path="Z:\hdmi\src\hdmi\svo_vdma.v" type="verilog"/>
-        <File path="Z:\hdmi\src\svo_hdmi.v" type="verilog"/>
-        <File path="Z:\hdmi\src\termfont_new.vh" type="verilog"/>
-        <File path="Z:\hdmi\src\termfont_old.vh" type="verilog"/>
-        <File path="Z:\hdmi\src\top.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/PS2_module.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/SERIAL_module.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/SOUND_module.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/SPI_module.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/TIMER_module.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/gowin_clkdiv/gowin_clkdiv.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/gowin_dpb/gowin_dpb.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/gowin_rpll/gowin_rpll.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_defines.vh" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_enc.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_openldi.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_tcard.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_term.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_tmds.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_utils.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi/svo_vdma.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/svo_hdmi.v" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/termfont_new.vh" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/termfont_old.vh" type="verilog"/>
+        <File path="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/top.v" type="verilog"/>
     </FileList>
     <OptionList>
         <Option type="disable_insert_pad" value="0"/>
         <Option type="global_freq" value="50.000"/>
         <Option type="looplimit" value="2000"/>
-        <Option type="output_file" value="Z:\hdmi\impl\gwsynthesis\hdmi.vg"/>
+        <Option type="output_file" value="/home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/impl/gwsynthesis/hdmi.vg"/>
         <Option type="print_all_synthesis_warning" value="0"/>
         <Option type="ram_rw_check" value="1"/>
         <Option type="top_module" value="top"/>

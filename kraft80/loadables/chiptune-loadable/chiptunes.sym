@@ -1,0 +1,25 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    .__.$$$.=  002710 L   |     .__.ABS.=  000000 G   |     .__.CPU.=  000000 L
+    .__.H$L.=  000000 L   |     PORTADDR=  000052     |     PORTADDR=  000051 
+    PORTAYAD=  000056     |     PORTAYDA=  000057     |     PORTBUTT=  000000 
+    PORTDATA=  000050     |     PORTMODE=  000053     |   1 chiptune   000000 R
+  1 delay      000043 R   |   1 delay1     00004D R   |   2 delay_cn   000002 R
+  2 delay_pr   000003 R   |     isr2vect=  004104     |   2 isr2vect   000000 R
+  1 playt1     00002A R   |   1 playtune   000027 R   |   1 prints     000073 R
+  1 setreg     00003B R   |   1 spclab_m   00007A R   |   1 timer_is   000054 R
+  1 timer_is   00006B R   |   1 timer_is   000065 R   |   1 timer_is   000066 R
+  1 timer_is   00006F R   |   1 tune_tab   00009A R
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+Area Table
+
+   0 _CODE      size      0   flags    0
+   1 CODE       size    748   flags    0
+   2 _DATA      size      4   flags    0
+

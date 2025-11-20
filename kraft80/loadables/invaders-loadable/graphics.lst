@@ -1,0 +1,983 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+
+
+                                      1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                      2 ;
+                                      3 ;  INVADERS FOR KRAFT 80
+                                      4 ;  A mini game inspired on Taito's Space Invaders
+                                      5 ;  14-Oct-2025 - ARMCoder
+                                      6 ;  Graphics module
+                                      7 ;
+                                      8 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                      9 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+
+
+                                     10 		.include "defines.h"
+                                      1 ;
+                                      2 ; KRAFT80 Defines
+                                      3 ;
+                                      4 
+                           004102     5 isr1vector	.equ	0x4102	;STACKTOP+2
+                           004104     6 isr2vector	.equ	0x4104	;STACKTOP+4
+                                      7 
+                           000000     8 PORTBUTTONS	.equ	0x00	
+                           000050     9 PORTDATA	.equ	0x50
+                           000051    10 PORTADDRL	.equ	0x51
+                           000052    11 PORTADDRH	.equ	0x52
+                           000053    12 PORTMODE	.equ	0x53
+                                     13 
+                                     14 ;   PS2 KEYBOARD
+                           000055    15 PORTKEY		.equ	0x55
+                                     16 
+                                     17 ;
+                                     18 ; Game Defines
+                                     19 ;
+                                     20 
+                           00000B    21 INVADER_COLS	.equ	11
+                           000005    22 INVADER_ROWS	.equ	5
+                           000037    23 INVADER_NUM	.equ	(INVADER_COLS*INVADER_ROWS)	
+                           000008    24 INVADERS_VSPACING .equ	8
+                                     25 
+                           0000E0    26 PLAYFIELD_WIDTH	.equ	224
+                                     27 
+                           000070    28 PLAY_WIDTH_BYTES .equ	(PLAYFIELD_WIDTH/2)
+                           00000C    29 VSTEP		.equ	12
+                           000008    30 VSTEP2		.equ	INVADERS_VSPACING
+                                     31 
+                           0000A0    32 BYTES_PER_LINE	.equ	160
+                                     33 
+                           000018    34 LEFT_OFFSET_BYTES .equ	(BYTES_PER_LINE - PLAY_WIDTH_BYTES)/2
+                                     35 
+                                     36 
+                           0000DC    37 CANNON_VPOS	.equ	220
+                           008998    38 CANNON_SCR_OFS	.equ	(BYTES_PER_LINE*CANNON_VPOS+LEFT_OFFSET_BYTES)
+                           008FD8    39 BLINE_SCR_OFS	.equ	(BYTES_PER_LINE*(10+CANNON_VPOS)+LEFT_OFFSET_BYTES)
+                                     40 
+                           007AA8    41 BUNKER1_SCR_OFS	.equ	(BYTES_PER_LINE*(CANNON_VPOS-24)+16+LEFT_OFFSET_BYTES)
+                           007ABF    42 BUNKER2_SCR_OFS	.equ	(BUNKER1_SCR_OFS+23)
+                           007AD6    43 BUNKER3_SCR_OFS	.equ	(BUNKER2_SCR_OFS+23)
+                           007AED    44 BUNKER4_SCR_OFS	.equ	(BUNKER3_SCR_OFS+23)
+                                     45 
+                           000226    46 INV_DIVIDER_INI	 .equ	550
+                           00000A    47 INV_DIVIDER_DROP .equ	10
+                                     48 
+                           000008    49 NUM_BOMBS	.equ	8
+                                     50 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 3.
+Hexadecimal [24-Bits]
+
+
+
+                                     11 
+                                     12 		.globl	set_screen
+                                     13 		.globl	drawbaseline, clear_lines, clrscr
+                                     14 		.globl	print_cannon, print_invaders, print_sprite, print_bunkers
+                                     15 		.globl	scrpos_invaders, stepping
+                                     16 		.globl	print_cannon_die
+                                     17 
+                                     18 		.module graphics
+                                     19 
+                                     20 		.area	CODE
+                                     21 
+                                     22 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                     23 
+      000000                         24 set_screen:
+      000000 3E 01            [ 7]   25 		ld	a,#1
+      000002 D3 53            [11]   26 		out	(PORTMODE),a
+      000004 C9               [10]   27 		ret
+                                     28 
+                                     29 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                     30 
+      000005                         31 drawbaseline:
+      000005 21 D8 8F         [10]   32 		ld	hl,#BLINE_SCR_OFS
+      000008 7D               [ 4]   33 		ld	a,l
+      000009 D3 51            [11]   34 		out	(PORTADDRL),a
+      00000B 7C               [ 4]   35 		ld	a,h
+      00000C D3 52            [11]   36 		out	(PORTADDRH),a
+      00000E 06 70            [ 7]   37 		ld	b,#PLAY_WIDTH_BYTES
+      000010 3E CC            [ 7]   38 		ld	a,#0xcc		;lightred
+      000012 D3 50            [11]   39 bline:		out	(PORTDATA),a
+      000014 10 FC            [13]   40 		djnz	bline
+      000016 C9               [10]   41 		ret
+                                     42 
+                                     43 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                     44 
+      000017 2A 05 00         [16]   45 clear_lines:	ld	hl,(scrpos_invaders)
+                                     46 
+      00001A 3A 00 00         [13]   47 		ld	a,(row_end)
+      00001D 3C               [ 4]   48 		inc	a
+      00001E 47               [ 4]   49 		ld	b,a
+      00001F 0E 0C            [ 7]   50 		ld	c,#VSTEP
+      000021 E5               [11]   51 cleanln00:	push	hl
+      000022 C5               [11]   52 		push	bc
+                                     53 
+      000023 41               [ 4]   54 		ld	b,c
+      000024 11 A0 00         [10]   55 		ld	de,#BYTES_PER_LINE
+                                     56 
+      000027 C5               [11]   57 clearln0:	push	bc
+      000028 AF               [ 4]   58 		xor	a
+      000029 ED 52            [15]   59 		sbc	hl,de
+                                     60 
+                                     61 		;;;;;;;;;;;;;;;;;;;;; 1 pixel line
+                                     62 
+      00002B 7D               [ 4]   63 		ld	a,l
+      00002C D3 51            [11]   64 		out	(PORTADDRL),a
+      00002E 7C               [ 4]   65 		ld	a,h
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 4.
+Hexadecimal [24-Bits]
+
+
+
+      00002F D3 52            [11]   66 		out	(PORTADDRH),a
+                                     67 
+      000031 3A 00 00         [13]   68 		ld	a,(col_start)
+      000034 47               [ 4]   69 		ld	b,a
+      000035 3A 00 00         [13]   70 		ld	a,(col_end)
+      000038 90               [ 4]   71 		sub	b
+      000039 3C               [ 4]   72 		inc	a
+      00003A 87               [ 4]   73 		add	a,a
+      00003B 87               [ 4]   74 		add	a,a
+      00003C 87               [ 4]   75 		add	a,a
+      00003D 47               [ 4]   76 		ld	b,a
+                                     77 		
+      00003E AF               [ 4]   78 		xor	a	;ld	a,#0x44
+      00003F D3 50            [11]   79 clearln1:	out	(PORTDATA),a
+      000041 10 FC            [13]   80 		djnz	clearln1
+      000043 C1               [10]   81 		pop	bc
+                                     82 		
+      000044 10 E1            [13]   83 		djnz	clearln0
+                                     84 
+      000046 C1               [10]   85 		pop	bc
+      000047 E1               [10]   86 		pop	hl
+      000048 11 00 0A         [10]   87 		ld	de,#BYTES_PER_LINE*(8+INVADERS_VSPACING)
+      00004B 19               [11]   88 		add	hl,de
+      00004C 0E 08            [ 7]   89 		ld	c,#VSTEP2
+      00004E 10 D1            [13]   90 		djnz	cleanln00
+      000050 C9               [10]   91 		ret
+                                     92 		
+                                     93 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                     94 
+      000051 AF               [ 4]   95 clrscr:		xor	a
+      000052 D3 51            [11]   96 		out	(PORTADDRL),a
+      000054 D3 52            [11]   97 		out	(PORTADDRH),a
+      000056 0E F0            [ 7]   98 		ld	c,#240
+      000058 06 A0            [ 7]   99 clrscr1:	ld	b,#BYTES_PER_LINE
+      00005A D3 50            [11]  100 clrscr2:	out	(PORTDATA),a
+      00005C 10 FC            [13]  101 		djnz	clrscr2
+      00005E 0D               [ 4]  102 		dec	c
+      00005F 20 F7            [12]  103 		jr	nz,clrscr1
+      000061 C9               [10]  104 		ret
+                                    105 
+                                    106 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                    107 
+      000062                        108 print_cannon:
+      000062 01 1F 05         [10]  109 		ld	bc,#cannon1
+      000065 3A 00 00         [13]  110 		ld	a,(cannon_hpos_px)
+      000068 CB 47            [ 8]  111 		bit	0,a
+      00006A 28 03            [12]  112 		jr	z,baseis1
+      00006C 01 5F 05         [10]  113 		ld	bc,#cannon2
+                                    114 
+      00006F 21 98 89         [10]  115 baseis1:	ld	hl,#CANNON_SCR_OFS
+      000072 CB 3F            [ 8]  116 		srl	a
+      000074 5F               [ 4]  117 		ld	e,a
+      000075 16 00            [ 7]  118 		ld	d,#0
+      000077 19               [11]  119 		add	hl,de		; hl = screen mem pos
+      000078 C3 68 01         [10]  120 		jp	print_sprite
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 5.
+Hexadecimal [24-Bits]
+
+
+
+                                    121 
+                                    122 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                    123 
+      00007B                        124 print_cannon_die:
+      00007B 01 9F 05         [10]  125 		ld	bc,#cannondie1
+      00007E 2A 00 00         [16]  126 		ld	hl,(cannondie_state)
+      000081 CB 65            [ 8]  127 		bit	4,l
+      000083 28 03            [12]  128 		jr	z,baseisdie1
+      000085 01 DF 05         [10]  129 		ld	bc,#cannondie2
+                                    130 
+      000088 21 98 89         [10]  131 baseisdie1:	ld	hl,#CANNON_SCR_OFS
+      00008B 3A 00 00         [13]  132 		ld	a,(cannon_hpos_px)
+      00008E CB 3F            [ 8]  133 		srl	a
+      000090 5F               [ 4]  134 		ld	e,a
+      000091 16 00            [ 7]  135 		ld	d,#0
+      000093 19               [11]  136 		add	hl,de		; hl = screen mem pos
+      000094 C3 68 01         [10]  137 		jp	print_sprite
+                                    138 
+                                    139 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                    140 
+      000097 2A 05 00         [16]  141 print_invaders:	ld	hl,(scrpos_invaders)
+      00009A 22 00 00         [16]  142 		ld	(spritepos),hl
+                                    143 
+      00009D 21 00 00         [10]  144 		ld	hl,#invader_matrix
+      0000A0 3A 00 00         [13]  145 		ld	a,(col_start)
+      0000A3 5F               [ 4]  146 		ld	e,a
+      0000A4 16 00            [ 7]  147 		ld	d,#0
+      0000A6 19               [11]  148 		add	hl,de
+      0000A7 22 08 00         [16]  149 		ld	(invader_matnow),hl
+      0000AA 22 0A 00         [16]  150 		ld	(invader_matnow2),hl
+                                    151 		
+      0000AD AF               [ 4]  152 		xor	a		; Row
+                                    153 
+      0000AE 32 07 00         [13]  154 print_inv1:	ld	(row_now),a
+                                    155 
+      0000B1 2A 00 00         [16]  156 		ld	hl,(spritepos)
+      0000B4 22 02 00         [16]  157 		ld	(spritenow),hl
+                                    158 		
+      0000B7 3A 00 00         [13]  159 		ld	a,(col_start)
+                                    160 		;ld	b,a
+                                    161 		;ld	c,#0
+                                    162 		;add	hl,bc
+                                    163 
+      0000BA 32 04 00         [13]  164 print_inv1a:	ld	(col_now),a	; Invader row
+                                    165 		;ld	a,(hl)
+                                    166 		
+      0000BD 2A 0A 00         [16]  167 		ld	hl,(invader_matnow2)
+      0000C0 7E               [ 7]  168 		ld	a,(hl)
+      0000C1 23               [ 6]  169 		inc	hl
+      0000C2 22 0A 00         [16]  170 		ld	(invader_matnow2),hl
+      0000C5 B7               [ 4]  171 		or	a
+      0000C6 28 27            [12]  172 		jr	z,blk		; No invader here, blank
+                                    173 		
+      0000C8 3A 07 00         [13]  174 		ld	a,(row_now)	; Invader type here
+      0000CB 87               [ 4]  175 		add	a,a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 6.
+Hexadecimal [24-Bits]
+
+
+
+      0000CC 47               [ 4]  176 		ld	b,a
+      0000CD 3A 0C 00         [13]  177 		ld	a,(stepping)
+      0000D0 80               [ 4]  178 		add	a,b
+      0000D1 B7               [ 4]  179 		or	a
+      0000D2 28 20            [12]  180 		jr	z,sq1a
+      0000D4 3D               [ 4]  181 		dec	a
+      0000D5 28 22            [12]  182 		jr	z,sq1b
+      0000D7 3D               [ 4]  183 		dec	a
+      0000D8 28 24            [12]  184 		jr	z,cr1a
+      0000DA 3D               [ 4]  185 		dec	a
+      0000DB 28 26            [12]  186 		jr	z,cr1b
+      0000DD 3D               [ 4]  187 		dec	a
+      0000DE 28 28            [12]  188 		jr	z,cr2a
+      0000E0 3D               [ 4]  189 		dec	a
+      0000E1 28 2A            [12]  190 		jr	z,cr2b
+      0000E3 3D               [ 4]  191 		dec	a
+      0000E4 28 2C            [12]  192 		jr	z,oc1a
+      0000E6 3D               [ 4]  193 		dec	a
+      0000E7 28 4B            [12]  194 		jr	z,oc1b
+      0000E9 3D               [ 4]  195 		dec	a
+      0000EA 28 4D            [12]  196 		jr	z,oc2a
+      0000EC 3D               [ 4]  197 		dec	a
+      0000ED 28 4F            [12]  198 		jr	z,oc2b
+                                    199 		
+      0000EF 01 5F 02         [10]  200 blk:		ld	bc,#blank		
+      0000F2 18 23            [12]  201 		jr	sprok
+      0000F4 01 9F 02         [10]  202 sq1a:		ld	bc,#squid1a
+      0000F7 18 1E            [12]  203 		jr	sprok
+      0000F9 01 DF 02         [10]  204 sq1b:		ld	bc,#squid1b
+      0000FC 18 19            [12]  205 		jr	sprok
+      0000FE 01 1F 03         [10]  206 cr1a:		ld	bc,#crab1a
+      000101 18 14            [12]  207 		jr	sprok
+      000103 01 5F 03         [10]  208 cr1b:		ld	bc,#crab1b
+      000106 18 0F            [12]  209 		jr	sprok
+      000108 01 9F 03         [10]  210 cr2a:		ld	bc,#crab2a
+      00010B 18 0A            [12]  211 		jr	sprok
+      00010D 01 DF 03         [10]  212 cr2b:		ld	bc,#crab2b
+      000110 18 05            [12]  213 		jr	sprok
+      000112 01 1F 04         [10]  214 oc1a:		ld	bc,#octo1a
+      000115 18 00            [12]  215 		jr	sprok
+                                    216 		
+      000117 2A 02 00         [16]  217 sprok:		ld	hl,(spritenow)
+      00011A E5               [11]  218 		push	hl
+      00011B CD 68 01         [17]  219 		call	print_sprite
+      00011E E1               [10]  220 		pop	hl
+      00011F 11 08 00         [10]  221 		ld	de,#8
+      000122 19               [11]  222 		add	hl,de
+      000123 22 02 00         [16]  223 		ld	(spritenow),hl
+                                    224 		
+      000126 3A 04 00         [13]  225 		ld	a,(col_now)
+      000129 47               [ 4]  226 		ld	b,a
+      00012A 3A 00 00         [13]  227 		ld	a,(col_end)
+      00012D B8               [ 4]  228 		cp	b
+      00012E 28 13            [12]  229 		jr	z,print_inv2
+                                    230 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 7.
+Hexadecimal [24-Bits]
+
+
+
+      000130 04               [ 4]  231 		inc	b
+      000131 78               [ 4]  232 		ld	a,b
+      000132 18 86            [12]  233 		jr	print_inv1a	; End invader row
+                                    234 
+      000134 01 5F 04         [10]  235 oc1b:		ld	bc,#octo1b
+      000137 18 DE            [12]  236 		jr	sprok
+      000139 01 9F 04         [10]  237 oc2a:		ld	bc,#octo2a
+      00013C 18 D9            [12]  238 		jr	sprok
+      00013E 01 DF 04         [10]  239 oc2b:		ld	bc,#octo2b
+      000141 18 D4            [12]  240 		jr	sprok
+                                    241 		
+      000143 2A 00 00         [16]  242 print_inv2:	ld	hl,(spritepos)
+      000146 11 00 0A         [10]  243 		ld	de,#BYTES_PER_LINE*(8+INVADERS_VSPACING)
+      000149 19               [11]  244 		add	hl,de
+      00014A 22 00 00         [16]  245 		ld	(spritepos),hl
+                                    246 
+      00014D 2A 08 00         [16]  247 		ld	hl,(invader_matnow)
+      000150 11 0B 00         [10]  248 		ld	de,#INVADER_COLS
+      000153 19               [11]  249 		add	hl,de
+      000154 22 08 00         [16]  250 		ld	(invader_matnow),hl
+      000157 22 0A 00         [16]  251 		ld	(invader_matnow2),hl
+                                    252 
+      00015A 3A 07 00         [13]  253 		ld	a,(row_now)
+      00015D 47               [ 4]  254 		ld	b,a
+      00015E 3A 00 00         [13]  255 		ld	a,(row_end)
+      000161 B8               [ 4]  256 		cp	b
+      000162 C8               [11]  257 		ret	z
+      000163 04               [ 4]  258 		inc	b
+      000164 78               [ 4]  259 		ld	a,b
+                                    260 
+                                    261 	;	push	af
+                                    262 	;	call	move_cannon
+                                    263 	;	pop	af
+                                    264 
+      000165 C3 AE 00         [10]  265 		jp	print_inv1
+                                    266 
+                                    267 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                    268 
+      000168 50               [ 4]  269 print_sprite:	ld	d,b		; bc = sprite  hl = scrpos
+      000169 59               [ 4]  270 		ld	e,c
+      00016A 0E 08            [ 7]  271 		ld	c,#8
+      00016C 7D               [ 4]  272 printlb1:	ld	a,l
+      00016D D3 51            [11]  273 		out	(PORTADDRL),a
+      00016F 7C               [ 4]  274 		ld	a,h
+      000170 D3 52            [11]  275 		out	(PORTADDRH),a
+                                    276 
+      000172 06 08            [ 7]  277 		ld	b,#8
+      000174 1A               [ 7]  278 printlb2:	ld	a,(de)
+      000175 D3 50            [11]  279 		out	(PORTDATA),a
+      000177 13               [ 6]  280 		inc	de
+      000178 10 FA            [13]  281 		djnz	printlb2		
+                                    282 
+      00017A 7D               [ 4]  283 		ld	a,l
+      00017B C6 A0            [ 7]  284 		add	a,#BYTES_PER_LINE
+      00017D 6F               [ 4]  285 		ld	l,a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 8.
+Hexadecimal [24-Bits]
+
+
+
+      00017E 30 01            [12]  286 		jr	nc,printlb3
+      000180 24               [ 4]  287 		inc	h
+                                    288 
+      000181 0D               [ 4]  289 printlb3:	dec	c
+      000182 20 E8            [12]  290 		jr	nz,printlb1
+                                    291 
+      000184 C9               [10]  292 		ret
+                                    293 
+                                    294 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                    295 ;;
+                                    296 ;; CGA Colors
+                                    297 ;; 0 BLACK      8 DARKGRAY
+                                    298 ;; 1 BLUE       9 LIGHTBLUE
+                                    299 ;; 2 GREEN     10 LIGHTGREEN
+                                    300 ;; 3 CYAN      11 LIGHTCYAN
+                                    301 ;; 4 RED       12 LIGHTRED
+                                    302 ;; 5 MAGENTA   13 LIGHTMAGENTA
+                                    303 ;; 6 BROWN     14 YELLOW
+                                    304 ;; 7 GRAY      15 WHITE
+                                    305 
+                                    306 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                    307 
+      000185 21 A8 7A         [10]  308 print_bunkers:	ld	hl,#BUNKER1_SCR_OFS
+      000188 CD 9E 01         [17]  309 		call	print_bunker
+      00018B 21 BF 7A         [10]  310 		ld	hl,#BUNKER2_SCR_OFS
+      00018E CD 9E 01         [17]  311 		call	print_bunker
+      000191 21 D6 7A         [10]  312 		ld	hl,#BUNKER3_SCR_OFS
+      000194 CD 9E 01         [17]  313 		call	print_bunker
+      000197 21 ED 7A         [10]  314 		ld	hl,#BUNKER4_SCR_OFS
+      00019A CD 9E 01         [17]  315 		call	print_bunker
+      00019D C9               [10]  316 		ret
+                                    317 		
+      00019E                        318 print_bunker:	; HL = screen position
+                                    319 		
+                                    320 		; Row 1
+      00019E 7D               [ 4]  321 		ld	a,l
+      00019F D3 51            [11]  322 		out	(PORTADDRL),a
+      0001A1 7C               [ 4]  323 		ld	a,h
+      0001A2 D3 52            [11]  324 		out	(PORTADDRH),a
+      0001A4 AF               [ 4]  325 		xor	a
+      0001A5 D3 50            [11]  326 		out	(PORTDATA),a
+      0001A7 D3 50            [11]  327 		out	(PORTDATA),a
+      0001A9 06 07            [ 7]  328 		ld	b,#7
+      0001AB CD 58 02         [17]  329 		call	print_bunkline
+                                    330 
+      0001AE 11 A0 00         [10]  331 		ld	de,#BYTES_PER_LINE
+                                    332 
+                                    333 		; Row 2
+      0001B1 19               [11]  334 		add	hl,de
+      0001B2 7D               [ 4]  335 		ld	a,l
+      0001B3 D3 51            [11]  336 		out	(PORTADDRL),a
+      0001B5 7C               [ 4]  337 		ld	a,h
+      0001B6 D3 52            [11]  338 		out	(PORTADDRH),a
+      0001B8 AF               [ 4]  339 		xor	a
+      0001B9 D3 50            [11]  340 		out	(PORTDATA),a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 9.
+Hexadecimal [24-Bits]
+
+
+
+      0001BB 3E 0C            [ 7]  341 		ld	a,#0x0c
+      0001BD D3 50            [11]  342 		out	(PORTDATA),a
+      0001BF 06 07            [ 7]  343 		ld	b,#7
+      0001C1 CD 58 02         [17]  344 		call	print_bunkline
+      0001C4 3E C0            [ 7]  345 		ld	a,#0xc0
+      0001C6 D3 50            [11]  346 		out	(PORTDATA),a
+                                    347 
+                                    348 		; Row 3
+      0001C8 19               [11]  349 		add	hl,de
+      0001C9 7D               [ 4]  350 		ld	a,l
+      0001CA D3 51            [11]  351 		out	(PORTADDRL),a
+      0001CC 7C               [ 4]  352 		ld	a,h
+      0001CD D3 52            [11]  353 		out	(PORTADDRH),a
+      0001CF AF               [ 4]  354 		xor	a
+      0001D0 D3 50            [11]  355 		out	(PORTDATA),a
+      0001D2 06 09            [ 7]  356 		ld	b,#9
+      0001D4 CD 58 02         [17]  357 		call	print_bunkline
+                                    358 
+                                    359 		; Row 4
+      0001D7 19               [11]  360 		add	hl,de
+      0001D8 7D               [ 4]  361 		ld	a,l
+      0001D9 D3 51            [11]  362 		out	(PORTADDRL),a
+      0001DB 7C               [ 4]  363 		ld	a,h
+      0001DC D3 52            [11]  364 		out	(PORTADDRH),a
+      0001DE 3E 0C            [ 7]  365 		ld	a,#0x0c
+      0001E0 D3 50            [11]  366 		out	(PORTDATA),a
+      0001E2 06 09            [ 7]  367 		ld	b,#9
+      0001E4 CD 58 02         [17]  368 		call	print_bunkline
+      0001E7 3E C0            [ 7]  369 		ld	a,#0xc0
+      0001E9 D3 50            [11]  370 		out	(PORTDATA),a
+                                    371 
+                                    372 		; Rows 5-12
+      0001EB 06 08            [ 7]  373 		ld	b,#8
+      0001ED C5               [11]  374 pbunk5:		push	bc
+      0001EE 19               [11]  375 		add	hl,de
+      0001EF 7D               [ 4]  376 		ld	a,l
+      0001F0 D3 51            [11]  377 		out	(PORTADDRL),a
+      0001F2 7C               [ 4]  378 		ld	a,h
+      0001F3 D3 52            [11]  379 		out	(PORTADDRH),a
+      0001F5 06 0B            [ 7]  380 		ld	b,#11
+      0001F7 CD 58 02         [17]  381 		call	print_bunkline
+      0001FA C1               [10]  382 		pop	bc
+      0001FB 10 F0            [13]  383 		djnz	pbunk5
+                                    384 
+                                    385 		; Row 13
+      0001FD 19               [11]  386 		add	hl,de
+      0001FE 7D               [ 4]  387 		ld	a,l
+      0001FF D3 51            [11]  388 		out	(PORTADDRL),a
+      000201 7C               [ 4]  389 		ld	a,h
+      000202 D3 52            [11]  390 		out	(PORTADDRH),a
+      000204 06 04            [ 7]  391 		ld	b,#4
+      000206 CD 58 02         [17]  392 		call	print_bunkline
+      000209 AF               [ 4]  393 		xor	a
+      00020A D3 50            [11]  394 		out	(PORTDATA),a
+      00020C D3 50            [11]  395 		out	(PORTDATA),a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 10.
+Hexadecimal [24-Bits]
+
+
+
+      00020E D3 50            [11]  396 		out	(PORTDATA),a
+      000210 06 04            [ 7]  397 		ld	b,#4
+      000212 CD 58 02         [17]  398 		call	print_bunkline
+                                    399 
+                                    400 		; Row 14
+      000215 19               [11]  401 		add	hl,de
+      000216 7D               [ 4]  402 		ld	a,l
+      000217 D3 51            [11]  403 		out	(PORTADDRL),a
+      000219 7C               [ 4]  404 		ld	a,h
+      00021A D3 52            [11]  405 		out	(PORTADDRH),a
+      00021C 06 03            [ 7]  406 		ld	b,#3
+      00021E CD 58 02         [17]  407 		call	print_bunkline
+      000221 3E C0            [ 7]  408 		ld	a,#0xc0
+      000223 D3 50            [11]  409 		out	(PORTDATA),a
+      000225 AF               [ 4]  410 		xor	a
+      000226 D3 50            [11]  411 		out	(PORTDATA),a
+      000228 D3 50            [11]  412 		out	(PORTDATA),a
+      00022A D3 50            [11]  413 		out	(PORTDATA),a
+      00022C 3E 0C            [ 7]  414 		ld	a,#0x0c
+      00022E D3 50            [11]  415 		out	(PORTDATA),a
+      000230 06 03            [ 7]  416 		ld	b,#3
+      000232 CD 58 02         [17]  417 		call	print_bunkline
+                                    418 
+                                    419 		; Rows 15-16
+      000235 06 02            [ 7]  420 		ld	b,#2
+      000237 C5               [11]  421 pbunk15:	push	bc
+      000238 19               [11]  422 		add	hl,de
+      000239 7D               [ 4]  423 		ld	a,l
+      00023A D3 51            [11]  424 		out	(PORTADDRL),a
+      00023C 7C               [ 4]  425 		ld	a,h
+      00023D D3 52            [11]  426 		out	(PORTADDRH),a
+      00023F 06 03            [ 7]  427 		ld	b,#3
+      000241 CD 58 02         [17]  428 		call	print_bunkline
+      000244 AF               [ 4]  429 		xor	a
+      000245 D3 50            [11]  430 		out	(PORTDATA),a
+      000247 D3 50            [11]  431 		out	(PORTDATA),a
+      000249 D3 50            [11]  432 		out	(PORTDATA),a
+      00024B D3 50            [11]  433 		out	(PORTDATA),a
+      00024D D3 50            [11]  434 		out	(PORTDATA),a
+      00024F 06 03            [ 7]  435 		ld	b,#3
+      000251 CD 58 02         [17]  436 		call	print_bunkline
+      000254 C1               [10]  437 		pop	bc
+      000255 10 E0            [13]  438 		djnz	pbunk15
+                                    439 		
+      000257 C9               [10]  440 		ret
+                                    441 
+      000258 3E CC            [ 7]  442 print_bunkline:	ld	a,#0xcc
+                                    443 
+      00025A D3 50            [11]  444 pbunkl:		out	(PORTDATA),a
+      00025C 10 FC            [13]  445 		djnz	pbunkl
+      00025E C9               [10]  446 		ret
+                                    447 
+                                    448 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                    449 
+                                    450 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BLANK (NO COLOR) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 11.
+Hexadecimal [24-Bits]
+
+
+
+                                    451 ;; ........ ........
+                                    452 ;; ........ ........
+                                    453 ;; ........ ........
+                                    454 ;; ........ ........
+                                    455 ;; ........ ........
+                                    456 ;; ........ ........
+                                    457 ;; ........ ........
+                                    458 ;; ........ ........
+      00025F 00 00 00 00 00 00 00   459 blank:		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
+             00
+      000267 00 00 00 00 00 00 00   460 		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
+             00
+      00026F 00 00 00 00 00 00 00   461 		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
+             00
+      000277 00 00 00 00 00 00 00   462 		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
+             00
+      00027F 00 00 00 00 00 00 00   463 		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
+             00
+      000287 00 00 00 00 00 00 00   464 		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
+             00
+      00028F 00 00 00 00 00 00 00   465 		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
+             00
+      000297 00 00 00 00 00 00 00   466 		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
+             00
+                                    467 				
+                                    468 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SQUID1 (LIGHTGREEN) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                    469 ;; .......# #.......
+                                    470 ;; ......## ##......
+                                    471 ;; .....### ###.....
+                                    472 ;; ....##.# #.##....
+                                    473 ;; ....#### ####....
+                                    474 ;; ......#. .#......
+                                    475 ;; .....#.# #.#.....
+                                    476 ;; ....#.#. .#.#....
+      00029F 00 00 00 0A A0 00 00   477 squid1a:	.byte	0x00,0x00,0x00,0x0a, 0xa0,0x00,0x00,0x00
+             00
+      0002A7 00 00 00 AA AA 00 00   478 		.byte	0x00,0x00,0x00,0xaa, 0xaa,0x00,0x00,0x00
+             00
+      0002AF 00 00 0A AA AA A0 00   479 		.byte	0x00,0x00,0x0a,0xaa, 0xaa,0xa0,0x00,0x00
+             00
+      0002B7 00 00 AA 0A A0 AA 00   480 		.byte	0x00,0x00,0xaa,0x0a, 0xa0,0xaa,0x00,0x00
+             00
+      0002BF 00 00 AA AA AA AA 00   481 		.byte	0x00,0x00,0xaa,0xaa, 0xaa,0xaa,0x00,0x00
+             00
+      0002C7 00 00 00 A0 0A 00 00   482 		.byte	0x00,0x00,0x00,0xa0, 0x0a,0x00,0x00,0x00
+             00
+      0002CF 00 00 0A 0A A0 A0 00   483 		.byte	0x00,0x00,0x0a,0x0a, 0xa0,0xa0,0x00,0x00
+             00
+      0002D7 00 00 A0 A0 0A 0A 00   484 		.byte	0x00,0x00,0xa0,0xa0, 0x0a,0x0a,0x00,0x00
+             00
+                                    485 
+                                    486 ;; .......# #.......
+                                    487 ;; ......## ##......
+                                    488 ;; .....### ###.....
+                                    489 ;; ....##.# #.##....
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 12.
+Hexadecimal [24-Bits]
+
+
+
+                                    490 ;; ....#### ####....
+                                    491 ;; .....#.# #.#.....
+                                    492 ;; ....#... ...#....
+                                    493 ;; .....#.. ..#.....
+      0002DF 00 00 00 0A A0 00 00   494 squid1b:	.byte	0x00,0x00,0x00,0x0a, 0xa0,0x00,0x00,0x00
+             00
+      0002E7 00 00 00 AA AA 00 00   495 		.byte	0x00,0x00,0x00,0xaa, 0xaa,0x00,0x00,0x00
+             00
+      0002EF 00 00 0A AA AA A0 00   496 		.byte	0x00,0x00,0x0a,0xaa, 0xaa,0xa0,0x00,0x00
+             00
+      0002F7 00 00 AA 0A A0 AA 00   497 		.byte	0x00,0x00,0xaa,0x0a, 0xa0,0xaa,0x00,0x00
+             00
+      0002FF 00 00 AA AA AA AA 00   498 		.byte	0x00,0x00,0xaa,0xaa, 0xaa,0xaa,0x00,0x00
+             00
+      000307 00 00 0A 0A A0 A0 00   499 		.byte	0x00,0x00,0x0a,0x0a, 0xa0,0xa0,0x00,0x00
+             00
+      00030F 00 00 A0 00 00 0A 00   500 		.byte	0x00,0x00,0xa0,0x00, 0x00,0x0a,0x00,0x00
+             00
+      000317 00 00 0A 00 00 A0 00   501 		.byte	0x00,0x00,0x0a,0x00, 0x00,0xa0,0x00,0x00
+             00
+                                    502 
+                                    503 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CRAB1 (LIGHTGREEN) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                    504 ;; ....#... ..#.....
+                                    505 ;; ..#..#.. .#..#...
+                                    506 ;; ..#.#### ###.#...
+                                    507 ;; ..###.## #.###...
+                                    508 ;; ..###### #####...
+                                    509 ;; ...##### ####....
+                                    510 ;; ....#... ..#.....
+                                    511 ;; ...#.... ...#....
+      00031F 00 00 A0 00 00 A0 00   512 crab1a:		.byte	0x00,0x00,0xa0,0x00, 0x00,0xa0,0x00,0x00
+             00
+      000327 00 A0 0A 00 0A 00 A0   513 		.byte	0x00,0xa0,0x0a,0x00, 0x0a,0x00,0xa0,0x00
+             00
+      00032F 00 A0 AA AA AA A0 A0   514 		.byte	0x00,0xa0,0xaa,0xaa, 0xaa,0xa0,0xa0,0x00
+             00
+      000337 00 AA A0 AA A0 AA A0   515 		.byte	0x00,0xaa,0xa0,0xaa, 0xa0,0xaa,0xa0,0x00
+             00
+      00033F 00 AA AA AA AA AA A0   516 		.byte	0x00,0xaa,0xaa,0xaa, 0xaa,0xaa,0xa0,0x00
+             00
+      000347 00 0A AA AA AA AA 00   517 		.byte	0x00,0x0a,0xaa,0xaa, 0xaa,0xaa,0x00,0x00
+             00
+      00034F 00 00 A0 00 00 A0 00   518 		.byte	0x00,0x00,0xa0,0x00, 0x00,0xa0,0x00,0x00
+             00
+      000357 00 0A 00 00 00 0A 00   519 		.byte	0x00,0x0a,0x00,0x00, 0x00,0x0a,0x00,0x00
+             00
+                                    520 		
+                                    521 ;; ....#... ..#.....
+                                    522 ;; .....#.. .#......
+                                    523 ;; ....#### ### ....
+                                    524 ;; ...##.## #.##....
+                                    525 ;; ..###### #####...
+                                    526 ;; ..#.#### ###.#...
+                                    527 ;; ..#.#... ..#.#...
+                                    528 ;; .....##. ##......
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 13.
+Hexadecimal [24-Bits]
+
+
+
+      00035F 00 00 A0 00 00 A0 00   529 crab1b:		.byte	0x00,0x00,0xa0,0x00, 0x00,0xa0,0x00,0x00
+             00
+      000367 00 00 0A 00 0A 00 00   530 		.byte	0x00,0x00,0x0a,0x00, 0x0a,0x00,0x00,0x00
+             00
+      00036F 00 00 AA AA AA A0 00   531 		.byte	0x00,0x00,0xaa,0xaa, 0xaa,0xa0,0x00,0x00
+             00
+      000377 00 0A A0 AA A0 AA 00   532 		.byte	0x00,0x0a,0xa0,0xaa, 0xa0,0xaa,0x00,0x00
+             00
+      00037F 00 AA AA AA AA AA A0   533 		.byte	0x00,0xaa,0xaa,0xaa, 0xaa,0xaa,0xa0,0x00
+             00
+      000387 00 A0 AA AA AA A0 A0   534 		.byte	0x00,0xa0,0xaa,0xaa, 0xaa,0xa0,0xa0,0x00
+             00
+      00038F 00 A0 A0 00 00 A0 A0   535 		.byte	0x00,0xa0,0xa0,0x00, 0x00,0xa0,0xa0,0x00
+             00
+      000397 00 00 0A A0 AA 00 00   536 		.byte	0x00,0x00,0x0a,0xa0, 0xaa,0x00,0x00,0x00	
+             00
+                                    537 
+                                    538 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CRAB2 (LIGHTCYAN) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                    539 ;; ....#... ..#.....
+                                    540 ;; ..#..#.. .#..#...
+                                    541 ;; ..#.#### ###.#...
+                                    542 ;; ..###.## #.###...
+                                    543 ;; ..###### #####...
+                                    544 ;; ...##### ####....
+                                    545 ;; ....#... ..#.....
+                                    546 ;; ...#.... ...#....
+      00039F 00 00 B0 00 00 B0 00   547 crab2a:		.byte	0x00,0x00,0xb0,0x00, 0x00,0xb0,0x00,0x00
+             00
+      0003A7 00 B0 0B 00 0B 00 B0   548 		.byte	0x00,0xb0,0x0b,0x00, 0x0b,0x00,0xb0,0x00
+             00
+      0003AF 00 B0 BB BB BB B0 B0   549 		.byte	0x00,0xb0,0xbb,0xbb, 0xbb,0xb0,0xb0,0x00
+             00
+      0003B7 00 BB B0 BB B0 BB B0   550 		.byte	0x00,0xbb,0xb0,0xbb, 0xb0,0xbb,0xb0,0x00
+             00
+      0003BF 00 BB BB BB BB BB B0   551 		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xb0,0x00
+             00
+      0003C7 00 0B BB BB BB BB 00   552 		.byte	0x00,0x0b,0xbb,0xbb, 0xbb,0xbb,0x00,0x00
+             00
+      0003CF 00 00 B0 00 00 B0 00   553 		.byte	0x00,0x00,0xb0,0x00, 0x00,0xb0,0x00,0x00
+             00
+      0003D7 00 0B 00 00 00 0B 00   554 		.byte	0x00,0x0b,0x00,0x00, 0x00,0x0b,0x00,0x00
+             00
+                                    555 		
+                                    556 ;; ....#... ..#.....
+                                    557 ;; .....#.. .#......
+                                    558 ;; ....#### ### ....
+                                    559 ;; ...##.## #.##....
+                                    560 ;; ..###### #####...
+                                    561 ;; ..#.#### ###.#...
+                                    562 ;; ..#.#... ..#.#...
+                                    563 ;; .....##. ##......
+      0003DF 00 00 B0 00 00 B0 00   564 crab2b:		.byte	0x00,0x00,0xb0,0x00, 0x00,0xb0,0x00,0x00
+             00
+      0003E7 00 00 0B 00 0B 00 00   565 		.byte	0x00,0x00,0x0b,0x00, 0x0b,0x00,0x00,0x00
+             00
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 14.
+Hexadecimal [24-Bits]
+
+
+
+      0003EF 00 00 BB BB BB B0 00   566 		.byte	0x00,0x00,0xbb,0xbb, 0xbb,0xb0,0x00,0x00
+             00
+      0003F7 00 0B B0 BB B0 BB 00   567 		.byte	0x00,0x0b,0xb0,0xbb, 0xb0,0xbb,0x00,0x00
+             00
+      0003FF 00 BB BB BB BB BB B0   568 		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xb0,0x00
+             00
+      000407 00 B0 BB BB BB B0 B0   569 		.byte	0x00,0xb0,0xbb,0xbb, 0xbb,0xb0,0xb0,0x00
+             00
+      00040F 00 B0 B0 00 00 B0 B0   570 		.byte	0x00,0xb0,0xb0,0x00, 0x00,0xb0,0xb0,0x00
+             00
+      000417 00 00 0B B0 BB 00 00   571 		.byte	0x00,0x00,0x0b,0xb0, 0xbb,0x00,0x00,0x00	
+             00
+                                    572 
+                                    573 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; OCTO1 (LIGHTCYAN) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                    574 ;; ......## ##......
+                                    575 ;; ...##### #####...
+                                    576 ;; ..###### ######..
+                                    577 ;; ..###..# #..###..
+                                    578 ;; ..###### ######..
+                                    579 ;; .....##. .##.....
+                                    580 ;; ....##.# #.##....
+                                    581 ;; ..##.... ....##..
+      00041F 00 00 00 BB BB 00 00   582 octo1a:		.byte	0x00,0x00,0x00,0xbb, 0xbb,0x00,0x00,0x00
+             00
+      000427 00 0B BB BB BB BB B0   583 		.byte	0x00,0x0b,0xbb,0xbb, 0xbb,0xbb,0xb0,0x00
+             00
+      00042F 00 BB BB BB BB BB BB   584 		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
+             00
+      000437 00 BB B0 0B B0 0B BB   585 		.byte	0x00,0xbb,0xb0,0x0b, 0xb0,0x0b,0xbb,0x00
+             00
+      00043F 00 BB BB BB BB BB BB   586 		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
+             00
+      000447 00 00 0B B0 0B B0 00   587 		.byte	0x00,0x00,0x0b,0xb0, 0x0b,0xb0,0x00,0x00
+             00
+      00044F 00 00 BB 0B B0 BB 00   588 		.byte	0x00,0x00,0xbb,0x0b, 0xb0,0xbb,0x00,0x00
+             00
+      000457 00 BB 00 00 00 00 BB   589 		.byte	0x00,0xbb,0x00,0x00, 0x00,0x00,0xbb,0x00
+             00
+                                    590 
+                                    591 ;; ......## ##......
+                                    592 ;; ...##### #####...
+                                    593 ;; ..###### ######..
+                                    594 ;; ..###..# #..###..
+                                    595 ;; ..###### ######..
+                                    596 ;; ....###. .###....
+                                    597 ;; ...##..# #..##...
+                                    598 ;; ....##.. ..##....
+      00045F 00 00 00 BB BB 00 00   599 octo1b:		.byte	0x00,0x00,0x00,0xbb, 0xbb,0x00,0x00,0x00
+             00
+      000467 00 0B BB BB BB BB B0   600 		.byte	0x00,0x0b,0xbb,0xbb, 0xbb,0xbb,0xb0,0x00
+             00
+      00046F 00 BB BB BB BB BB BB   601 		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
+             00
+      000477 00 BB B0 0B B0 0B BB   602 		.byte	0x00,0xbb,0xb0,0x0b, 0xb0,0x0b,0xbb,0x00
+             00
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 15.
+Hexadecimal [24-Bits]
+
+
+
+      00047F 00 BB BB BB BB BB BB   603 		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
+             00
+      000487 00 00 BB B0 0B BB 00   604 		.byte	0x00,0x00,0xbb,0xb0, 0x0b,0xbb,0x00,0x00
+             00
+      00048F 00 0B B0 0B B0 0B B0   605 		.byte	0x00,0x0b,0xb0,0x0b, 0xb0,0x0b,0xb0,0x00
+             00
+      000497 00 00 BB 00 00 BB 00   606 		.byte	0x00,0x00,0xbb,0x00, 0x00,0xbb,0x00,0x00
+             00
+                                    607 
+                                    608 ;;;;;;;;;;;;;;;;;;;;;;;;;;;; OCTO2 (LIGHTMAGENTA) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                    609 ;; ......## ##......
+                                    610 ;; ...##### #####...
+                                    611 ;; ..###### ######..
+                                    612 ;; ..###..# #..###..
+                                    613 ;; ..###### ######..
+                                    614 ;; .....##. .##.....
+                                    615 ;; ....##.# #.##....
+                                    616 ;; ..##.... ....##..
+      00049F 00 00 00 DD DD 00 00   617 octo2a:		.byte	0x00,0x00,0x00,0xdd, 0xdd,0x00,0x00,0x00
+             00
+      0004A7 00 0D DD DD DD DD D0   618 		.byte	0x00,0x0d,0xdd,0xdd, 0xdd,0xdd,0xd0,0x00
+             00
+      0004AF 00 DD DD DD DD DD DD   619 		.byte	0x00,0xdd,0xdd,0xdd, 0xdd,0xdd,0xdd,0x00
+             00
+      0004B7 00 DD D0 0D D0 0D DD   620 		.byte	0x00,0xdd,0xd0,0x0d, 0xd0,0x0d,0xdd,0x00
+             00
+      0004BF 00 DD DD DD DD DD DD   621 		.byte	0x00,0xdd,0xdd,0xdd, 0xdd,0xdd,0xdd,0x00
+             00
+      0004C7 00 00 0D D0 0D D0 00   622 		.byte	0x00,0x00,0x0d,0xd0, 0x0d,0xd0,0x00,0x00
+             00
+      0004CF 00 00 DD 0D D0 DD 00   623 		.byte	0x00,0x00,0xdd,0x0d, 0xd0,0xdd,0x00,0x00
+             00
+      0004D7 00 DD 00 00 00 00 DD   624 		.byte	0x00,0xdd,0x00,0x00, 0x00,0x00,0xdd,0x00
+             00
+                                    625 
+                                    626 ;; ......## ##......
+                                    627 ;; ...##### #####...
+                                    628 ;; ..###### ######..
+                                    629 ;; ..###..# #..###..
+                                    630 ;; ..###### ######..
+                                    631 ;; ....###. .###....
+                                    632 ;; ...##..# #..##...
+                                    633 ;; ....##.. ..##....
+      0004DF 00 00 00 DD DD 00 00   634 octo2b:		.byte	0x00,0x00,0x00,0xdd, 0xdd,0x00,0x00,0x00
+             00
+      0004E7 00 0D DD DD DD DD D0   635 		.byte	0x00,0x0d,0xdd,0xdd, 0xdd,0xdd,0xd0,0x00
+             00
+      0004EF 00 DD DD DD DD DD DD   636 		.byte	0x00,0xdd,0xdd,0xdd, 0xdd,0xdd,0xdd,0x00
+             00
+      0004F7 00 DD D0 0D D0 0D DD   637 		.byte	0x00,0xdd,0xd0,0x0d, 0xd0,0x0d,0xdd,0x00
+             00
+      0004FF 00 DD DD DD DD DD DD   638 		.byte	0x00,0xdd,0xdd,0xdd, 0xdd,0xdd,0xdd,0x00
+             00
+      000507 00 00 DD D0 0D DD 00   639 		.byte	0x00,0x00,0xdd,0xd0, 0x0d,0xdd,0x00,0x00
+             00
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 16.
+Hexadecimal [24-Bits]
+
+
+
+      00050F 00 0D D0 0D D0 0D D0   640 		.byte	0x00,0x0d,0xd0,0x0d, 0xd0,0x0d,0xd0,0x00
+             00
+      000517 00 00 DD 00 00 DD 00   641 		.byte	0x00,0x00,0xdd,0x00, 0x00,0xdd,0x00,0x00
+             00
+                                    642 
+                                    643 ;;;;;;;;;;;;;;;;;;;;;;;;;;; LASER BASE (LIGHTCYAN) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                    644 ;; .......# ........
+                                    645 ;; ......## #.......
+                                    646 ;; ......## #.......
+                                    647 ;; ..###### #####...
+                                    648 ;; .####### ######..
+                                    649 ;; .####### ######..
+                                    650 ;; .####### ######..
+                                    651 ;; .####### ######..
+      00051F 00 00 00 0B 00 00 00   652 cannon1:	.byte	0x00,0x00,0x00,0x0b, 0x00,0x00,0x00,0x00
+             00
+      000527 00 00 00 BB B0 00 00   653   		.byte	0x00,0x00,0x00,0xbb, 0xb0,0x00,0x00,0x00
+             00
+      00052F 00 00 00 BB B0 00 00   654   		.byte	0x00,0x00,0x00,0xbb, 0xb0,0x00,0x00,0x00
+             00
+      000537 00 BB BB BB BB BB B0   655   		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xb0,0x00
+             00
+      00053F 0B BB BB BB BB BB BB   656   		.byte	0x0b,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
+             00
+      000547 0B BB BB BB BB BB BB   657   		.byte	0x0b,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
+             00
+      00054F 0B BB BB BB BB BB BB   658   		.byte	0x0b,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
+             00
+      000557 0B BB BB BB BB BB BB   659   		.byte	0x0b,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
+             00
+                                    660 
+                                    661 ;; ........ #.......
+                                    662 ;; .......# ##......
+                                    663 ;; .......# ##......
+                                    664 ;; ...##### ######..
+                                    665 ;; ..###### #######.
+                                    666 ;; ..###### #######.
+                                    667 ;; ..###### #######.
+                                    668 ;; ..###### #######.
+      00055F 00 00 00 00 B0 00 00   669 cannon2:	.byte	0x00,0x00,0x00,0x00, 0xb0,0x00,0x00,0x00
+             00
+      000567 00 00 00 0B BB 00 00   670   		.byte	0x00,0x00,0x00,0x0b, 0xbb,0x00,0x00,0x00
+             00
+      00056F 00 00 00 0B BB 00 00   671   		.byte	0x00,0x00,0x00,0x0b, 0xbb,0x00,0x00,0x00
+             00
+      000577 00 0B BB BB BB BB BB   672   		.byte	0x00,0x0b,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
+             00
+      00057F 00 BB BB BB BB BB BB   673   		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0xb0
+             B0
+      000587 00 BB BB BB BB BB BB   674   		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0xb0
+             B0
+      00058F 00 BB BB BB BB BB BB   675   		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0xb0
+             B0
+      000597 00 BB BB BB BB BB BB   676   		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0xb0
+             B0
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 17.
+Hexadecimal [24-Bits]
+
+
+
+                                    677 
+                                    678 ;; ........ ........
+                                    679 ;; ...#..## ...#....
+                                    680 ;; ........ #.#.....
+                                    681 ;; ..#.#.## ####.#..
+                                    682 ;; .##.###. .####...
+                                    683 ;; .#.##### ###.###.
+                                    684 ;; ..###.## ######..
+                                    685 ;; .####### ######..
+      00059F 00 00 00 00 00 00 00   686 cannondie1:	.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
+             00
+      0005A7 00 0B 00 BB 00 0B 00   687 		.byte	0x00,0x0b,0x00,0xbb, 0x00,0x0b,0x00,0x00
+             00
+      0005AF 00 00 00 00 B0 B0 00   688 		.byte	0x00,0x00,0x00,0x00, 0xb0,0xb0,0x00,0x00
+             00
+      0005B7 00 B0 B0 BB BB BB 0B   689 		.byte	0x00,0xb0,0xb0,0xbb, 0xbb,0xbb,0x0b,0x00
+             00
+      0005BF 0B B0 BB B0 0B BB B0   690 		.byte	0x0b,0xb0,0xbb,0xb0, 0x0b,0xbb,0xb0,0x00
+             00
+      0005C7 0B 0B BB BB BB B0 BB   691 		.byte	0x0b,0x0b,0xbb,0xbb, 0xbb,0xb0,0xbb,0xb0
+             B0
+      0005CF 00 BB B0 BB BB BB BB   692 		.byte	0x00,0xbb,0xb0,0xbb, 0xbb,0xbb,0xbb,0x00
+             00
+      0005D7 0B BB BB BB BB BB BB   693 		.byte	0x0b,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
+             00
+                                    694 
+                                    695 ;; ........ ........
+                                    696 ;; .#.#..#. .###....
+                                    697 ;; ....#... #.#.....
+                                    698 ;; .##.#.## ####.#..
+                                    699 ;; ..###.## .####...
+                                    700 ;; .#.##### ###.##..
+                                    701 ;; ..##..## .######.
+                                    702 ;; .#.##### .#####..
+      0005DF 00 00 00 00 00 00 00   703 cannondie2:	.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
+             00
+      0005E7 0B 0B 00 B0 0B BB 00   704 		.byte	0x0b,0x0b,0x00,0xb0, 0x0b,0xbb,0x00,0x00
+             00
+      0005EF 00 00 B0 00 B0 B0 00   705 		.byte	0x00,0x00,0xb0,0x00, 0xb0,0xb0,0x00,0x00
+             00
+      0005F7 0B B0 B0 BB BB BB 0B   706 		.byte	0x0b,0xb0,0xb0,0xbb, 0xbb,0xbb,0x0b,0x00
+             00
+      0005FF 00 BB B0 BB 0B BB B0   707 		.byte	0x00,0xbb,0xb0,0xbb, 0x0b,0xbb,0xb0,0x00
+             00
+      000607 0B 0B BB BB BB B0 BB   708 		.byte	0x0b,0x0b,0xbb,0xbb, 0xbb,0xb0,0xbb,0x00
+             00
+      00060F 00 BB 00 BB 0B BB BB   709 		.byte	0x00,0xbb,0x00,0xbb, 0x0b,0xbb,0xbb,0xb0
+             B0
+      000617 0B 0B BB BB 0B BB BB   710 		.byte	0x0b,0x0b,0xbb,0xbb, 0x0b,0xbb,0xbb,0x00
+             00
+                                    711 
+                                    712 	.area	DATA
+                                    713 
+      000000                        714 spritepos:	.ds	2
+      000002                        715 spritenow:	.ds	2
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 18.
+Hexadecimal [24-Bits]
+
+
+
+      000004                        716 col_now:	.ds	1
+      000005                        717 scrpos_invaders:.ds	2
+      000007                        718 row_now:	.ds	1
+      000008                        719 invader_matnow:	.ds	2
+      00000A                        720 invader_matnow2:.ds	2
+      00000C                        721 stepping:	.ds	1
+                                    722 
+                                    723 

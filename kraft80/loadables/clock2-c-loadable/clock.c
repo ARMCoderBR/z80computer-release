@@ -10,7 +10,7 @@ Example program for the KRAFT 80
 #include "io-kraft80.h"
 #include "videodisp.h"
 
-#pragma codeseg MAIN
+#pragma codeseg CODE
 
 
 void new_isr2(void) __interrupt;

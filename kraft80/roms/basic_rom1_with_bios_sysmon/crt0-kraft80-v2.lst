@@ -1,0 +1,1357 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+
+
+                                      1 ;--------------------------------------------------------------------------
+                                      2 ;  crt0.s - Generic crt0.s for a Z80
+                                      3 ;
+                                      4 ;  Copyright (C) 2000, Michael Hope
+                                      5 ;
+                                      6 ;  This library is free software; you can redistribute it and/or modify it
+                                      7 ;  under the terms of the GNU General Public License as published by the
+                                      8 ;  Free Software Foundation; either version 2, or (at your option) any
+                                      9 ;  later version.
+                                     10 ;
+                                     11 ;  This library is distributed in the hope that it will be useful,
+                                     12 ;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+                                     13 ;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+                                     14 ;  GNU General Public License for more details.
+                                     15 ;
+                                     16 ;  You should have received a copy of the GNU General Public License 
+                                     17 ;  along with this library; see the file COPYING. If not, write to the
+                                     18 ;  Free Software Foundation, 51 Franklin Street, Fifth Floor, Boston,
+                                     19 ;   MA 02110-1301, USA.
+                                     20 ;
+                                     21 ;  As a special exception, if you link this library with other files,
+                                     22 ;  some of which are compiled with SDCC, to produce an executable,
+                                     23 ;  this library does not by itself cause the resulting executable to
+                                     24 ;  be covered by the GNU General Public License. This exception does
+                                     25 ;  not however invalidate any other reasons why the executable file
+                                     26 ;  might be covered by the GNU General Public License.
+                                     27 ;--------------------------------------------------------------------------
+                                     28 
+                                     29 ;;;-----------------------------------------------------------------------
+                                     30 ;;; INTERRUPT HANDLERS & VECTORS
+                                     31 ;;; HARDWARE DRIVERS FOR THE TANG NANO HARDWARE:
+                                     32 ;;;    VIDEO, SERIAL, TIMER & PS/2 KEYBOARD
+                                     33 ;;;    BY ARMCODER - 2025
+                                     34 ;;;-----------------------------------------------------------------------
+                                     35 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+
+
+                                     36 	.include "defines.s"
+                           004000     1 RAMBASE		.equ 0x4000
+                           004200     2 RAMTOP		.equ RAMBASE+0x200	;0x4200
+                           0041FE     3 timecount	.equ RAMTOP-2		;0x41fe
+                                      4 
+                                      5 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 3.
+Hexadecimal [24-Bits]
+
+
+
+                                     37 
+                                     38 ;RAMBASE		.equ 0x4000
+                           004100    39 STACKTOP	.equ RAMBASE+0x100	;0x4100
+                           004100    40 isr0vector	.equ STACKTOP
+                           004102    41 isr1vector	.equ STACKTOP+2		;0x4102
+                           004104    42 isr2vector	.equ STACKTOP+4		;0x4104
+                           004106    43 isr3vector	.equ STACKTOP+6		;0x4106
+                           004108    44 isr4vector	.equ STACKTOP+8		;0x4108
+                           00410A    45 isr5vector	.equ STACKTOP+10	;0x410a
+                           00410C    46 isr6vector	.equ STACKTOP+12	;0x410c
+                           00410E    47 isr7vector	.equ STACKTOP+14	;0x410e
+                           000080    48 BUFRXSIZE	.equ 0x80
+                           004110    49 bufrx		.equ STACKTOP+16	;0x4110
+                           004190    50 bufrxins	.equ bufrx+BUFRXSIZE	;0x4190
+                           004191    51 bufrxget	.equ bufrxins+1		;0x4191
+                           004192    52 bufrxqty	.equ bufrxget+1		;0x4192
+                                     53 
+                           000030    54 VIDROWS		.equ	48
+                           000050    55 VIDCOLS		.equ	80
+                           004193    56 vidrow		.equ bufrxqty+1		;0x4193
+                           004194    57 vidcol		.equ vidrow+1		;0x4194
+                           004195    58 vidptr		.equ vidcol+1		;0x4195
+                                     59 
+                           004197    60 scrollcnt	.equ vidptr+2		;0x4197
+                           004198    61 lastlineptr	.equ scrollcnt+1	;0x4198
+                           00419A    62 bufkey		.equ lastlineptr+2	;0x419a
+                           000008    63 BUFKEYSIZE	.equ	8
+                           0041A2    64 bufkeyqty	.equ bufkey+BUFKEYSIZE	;0x41a2
+                           0041A3    65 bufkeyins	.equ bufkeyqty+1	;0x41a3
+                           0041A4    66 bufkeyget	.equ bufkeyins+1	;0x41a4
+                           0041A5    67 kflags		.equ bufkeyget+1	;0x41a5	;00xxxxxx
+                                     68 						;  |||||`-- LShift
+                                     69 						;  ||||`--- RShift
+                                     70 						;  |||`---- Caps
+                                     71 						;  ||`----- Break Code Indicator
+                                     72 						;  |`------ LCTRL  
+                                     73 						;  `------- RCTRL (reserved)   
+                           0041A6    74 lastkey		.equ kflags+1		;0x41a6
+                           0041A7    75 sysflag		.equ lastkey+1		;0x41a7
+                           0041A8    76 dispcol		.equ sysflag+1		;0x41a8
+                                     77 
+                           0041A7    78 __varend__	.equ lastkey+1
+                                     79 
+                                     80 ;RAMTOP		.equ RAMBASE+0x200	;0x4200
+                                     81 ;timecount	.equ RAMTOP-2		;0x41fe
+                                     82 
+                           000000    83 PORTLEDS	.equ 0x00
+                                     84 
+                                     85 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                     86 ; LEDS & BUTTONS
+                           000000    87 PORTLEDS	.equ	0x00
+                           000000    88 PORTBUTTONS	.equ	0x00
+                           000010    89 PORTDISP	.equ	0x10
+                                     90 
+                                     91 ; FPGA addr mapping (base 0x50)
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 4.
+Hexadecimal [24-Bits]
+
+
+
+                                     92 ; 0000: Video RAM Data (R/W)
+                                     93 ; 0001: Video ADDR Low (W)
+                                     94 ; 0010: Video ADDR High (W)
+                                     95 ; 0011: Video control (W)
+                                     96 ; 0100: Timer Status & Control(R/W)
+                                     97 ; 0101: PS/2 RX Data (R)
+                                     98 ; 0110: Sound REG Index (W)
+                                     99 ; 0111: Sound REG Data (W)
+                                    100 ; 1000: Serial Status & Control (R/W)
+                                    101 ; 1001: Serial Data RX/TX (R/W)
+                                    102 ; 1010
+                                    103 ; 1011
+                                    104 ; 1100
+                                    105 ; 1101
+                                    106 ; 1110
+                                    107 ; 1111: Status Reg (R)
+                                    108 
+                                    109 ; FPGA
+                                    110 ;   VIDEO
+                           000050   111 PORTDATA	.equ	0x50	; Video ports
+                           000051   112 PORTADDRL	.equ	0x51
+                           000052   113 PORTADDRH	.equ	0x52
+                           000053   114 PORTMODE	.equ	0x53
+                                    115 
+                                    116 ; TIMER STATUS/CONTROL
+                           000054   117 PORTTIMER	.equ	0x54
+                                    118 
+                                    119 ;   PS2 KEYBOARD
+                           000055   120 PORTKEY		.equ	0x55
+                                    121 
+                                    122 ; AUDIO
+                           000056   123 PORTAYADDR	.equ	0x56
+                           000057   124 PORTAYDATA	.equ	0x57
+                                    125 
+                                    126 ; SERIAL
+                           000058   127 PORTSERSTATUS	.equ	0x58
+                           000058   128 PORTSERCTL	.equ	0x58
+                           000002   129 	PORTSER_EN	.equ	2
+                           000001   130 	PORTSER_RTSON	.equ	1
+                           000000   131 	PORTSER_DIS	.equ	0
+                           000000   132 	PORTSER_RTSOFF	.equ	0
+                                    133 
+                           000059   134 PORTSERDATA	.equ	0x59
+                                    135 
+                                    136 ;   FPGA STATUS
+                           00005F   137 PORTFPGASTATUS	.equ	0x5F
+                                    138 
+                                    139 	.module crt0
+                                    140 
+                                    141 	.globl	prints
+                                    142 
+                                    143 	.area	_HEADER (ABS)
+                                    144 	;; Reset vector
+      000000                        145 	.org 	0
+      000000 C3 03 01         [10]  146 	jp	init
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 5.
+Hexadecimal [24-Bits]
+
+
+
+                                    147 
+      000008                        148 	.org	0x08
+      000008 C3 DC 00         [10]  149 	jp	mon_putchar
+                                    150 
+      000010                        151 	.org	0x10
+      000010 C3 E9 00         [10]  152 	jp	mon_getchar
+                                    153 
+      000018                        154 	.org	0x18
+      000018 C3 F6 00         [10]  155 	jp	mon_haskey
+                                    156 	
+      000020                        157 	.org	0x20
+      000020 C3 A9 01         [10]  158 	jp	user_fns
+      000028                        159 	.org	0x28
+      000028 ED 4D            [14]  160 	reti
+      000030                        161 	.org	0x30
+      000030 ED 4D            [14]  162 	reti
+                                    163 
+                                    164 	;///////////////////////////////////////////////////////////////////////
+                                    165 	;//////////////////////////   ISR DISPATCH   ///////////////////////////
+                                    166 	;///////////////////////////////////////////////////////////////////////
+      000038                        167 	.org	0x38
+      000038 C3 3F 00         [10]  168 	jp	fpga_isr
+                                    169 
+                                    170 	;;;; END OF HEADER SECTION
+                                    171 
+                                    172 	.area	CODE
+                                    173 
+      000000                        174 signon:
+      000000 0D 0A 4B 72 61 66 74   175 	.ascii	'\r\nKraft 80 - Z80 Computer - BIOS v'
+             20 38 30 20 2D 20 5A
+             38 30 20 43 6F 6D 70
+             75 74 65 72 20 2D 20
+             42 49 4F 53 20 76
+      000022 31 2E 30 2E 32         176 	.ascii	'1.0.2'
+      000027 0D 0A 00               177 	.ascii	'\r\n\0'
+                                    178 
+      00002A 4B 72 61 66 74 20 38   179 msgk1:	.ascii	'Kraft 80\0'
+             30 00
+      000033 42 49 4F 53 20 76      180 msgk2:	.ascii	'BIOS v'
+      000039 31 2E 30 2E 32         181 	.ascii	'1.0.2'
+      00003E 00                     182 	.ascii	'\0'
+                                    183 
+      00003F                        184 fpga_isr:
+      00003F F5               [11]  185 	push	af
+      000040 E5               [11]  186 	push	hl
+                                    187 
+      000041                        188 fpga_isrloop:
+      000041 DB 5F            [11]  189 	in	a,(PORTFPGASTATUS)
+      000043 E6 07            [ 7]  190 	and	#0x07
+      000045 28 2A            [12]  191 	jr	z,fpga_isrend
+                                    192 
+      000047 CB 47            [ 8]  193 	bit	0,a			; Has PS/2 interrupt?
+      000049 28 08            [12]  194 	jr	z,fpga_isr1		; No
+                                    195 
+      00004B 21 53 00         [10]  196 	ld	hl,#fpga_isr1
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 6.
+Hexadecimal [24-Bits]
+
+
+
+      00004E E5               [11]  197 	push	hl
+      00004F 2A 02 41         [16]  198 	ld	hl,(isr1vector)
+      000052 E9               [ 4]  199 	jp	(hl)
+                                    200 
+      000053                        201 fpga_isr1:
+      000053 DB 5F            [11]  202 	in	a,(PORTFPGASTATUS)	; Has timer interrupt?
+      000055 CB 4F            [ 8]  203 	bit	1,a			; No
+      000057 28 0A            [12]  204 	jr	z,fpga_isr2
+                                    205 
+      000059 DB 54            [11]  206 	in	a,(PORTTIMER)		; Timer EOI
+      00005B 21 63 00         [10]  207 	ld	hl,#fpga_isr2
+      00005E E5               [11]  208 	push	hl
+      00005F 2A 04 41         [16]  209 	ld	hl,(isr2vector)
+      000062 E9               [ 4]  210 	jp	(hl)
+                                    211 
+      000063                        212 fpga_isr2:	
+      000063 DB 5F            [11]  213 	in	a,(PORTFPGASTATUS)	; Has Serial RX interrupt?
+      000065 CB 57            [ 8]  214 	bit	2,a			; No
+      000067 28 D8            [12]  215 	jr	z,fpga_isrloop
+                                    216 
+      000069 21 41 00         [10]  217 	ld	hl,#fpga_isrloop
+      00006C E5               [11]  218 	push	hl
+      00006D 2A 00 41         [16]  219 	ld	hl,(isr0vector)
+      000070 E9               [ 4]  220 	jp	(hl)
+                                    221 
+      000071                        222 fpga_isrend:	
+      000071 E1               [10]  223 	pop	hl
+      000072 F1               [10]  224 	pop	af
+      000073 FB               [ 4]  225 	ei
+      000074 ED 4D            [14]  226 	reti
+                                    227 
+                                    228 	;///////////////////////////////////////////////////////////////////////
+                                    229 
+                                    230 
+      000076                        231 timer_isr:
+      000076 3A FE 41         [13]  232 	ld	a,(timecount)
+      000079 3C               [ 4]  233 	inc	a
+      00007A 32 FE 41         [13]  234 	ld	(timecount),a
+                                    235 	;out	(PORTLEDS),a
+      00007D C9               [10]  236 	ret
+                                    237 
+                                    238 
+      00007E                        239 ps2_isr:
+      00007E 3A A2 41         [13]  240 	ld	a,(bufkeyqty)
+      000081 FE 08            [ 7]  241 	cp	#BUFKEYSIZE
+      000083 20 03            [12]  242 	jr	nz,key_isr1
+      000085 DB 55            [11]  243 	in	a,(PORTKEY)
+      000087 C9               [10]  244 	ret
+                                    245 
+      000088                        246 key_isr1:	
+      000088 3C               [ 4]  247 	inc	a
+      000089 32 A2 41         [13]  248 	ld	(bufkeyqty),a
+                                    249 
+      00008C 3A A3 41         [13]  250 	ld	a,(bufkeyins)
+      00008F C5               [11]  251 	push	bc
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 7.
+Hexadecimal [24-Bits]
+
+
+
+      000090 4F               [ 4]  252 	ld	c,a
+      000091 06 00            [ 7]  253 	ld	b,#0
+      000093 E5               [11]  254 	push	hl
+      000094 21 9A 41         [10]  255 	ld	hl,#bufkey
+      000097 09               [11]  256 	add	hl,bc
+      000098 DB 55            [11]  257 	in	a,(PORTKEY)	; Read key -> PS/2 EOI
+      00009A 77               [ 7]  258 	ld	(hl),a
+      00009B E1               [10]  259 	pop	hl
+      00009C 79               [ 4]  260 	ld	a,c
+      00009D C1               [10]  261 	pop	bc
+      00009E 3C               [ 4]  262 	inc	a
+      00009F FE 08            [ 7]  263 	cp	#BUFKEYSIZE
+      0000A1 38 01            [12]  264 	jr	c,key_isr2
+      0000A3 AF               [ 4]  265 	xor	a
+      0000A4                        266 key_isr2:	
+      0000A4 32 A3 41         [13]  267 	ld	(bufkeyins),a
+      0000A7 C9               [10]  268 	ret
+                                    269 
+      0000A8                        270 rx_isr:		
+      0000A8 3A 92 41         [13]  271 	ld	a,(bufrxqty)
+      0000AB FE 80            [ 7]  272 	cp	#BUFRXSIZE
+      0000AD 20 03            [12]  273 	jr	nz,rx_isr1
+      0000AF DB 59            [11]  274 	in	a,(PORTSERDATA)
+      0000B1 C9               [10]  275 	ret
+                                    276 	
+      0000B2                        277 rx_isr1:	
+      0000B2 3C               [ 4]  278 	inc	a
+      0000B3 FE 70            [ 7]  279 	cp	#(BUFRXSIZE-16)
+      0000B5 20 06            [12]  280 	jr	nz,rx_isr1a
+                                    281 	
+      0000B7 F5               [11]  282 	push	af
+      0000B8 3E 02            [ 7]  283 	ld	a,#(PORTSER_EN|PORTSER_RTSOFF)
+      0000BA D3 58            [11]  284 	out	(PORTSERCTL),a
+      0000BC F1               [10]  285 	pop	af
+                                    286 
+      0000BD                        287 rx_isr1a:	
+      0000BD 32 92 41         [13]  288 	ld	(bufrxqty),a
+      0000C0 3A 90 41         [13]  289 	ld	a,(bufrxins)
+      0000C3 C5               [11]  290 	push	bc
+      0000C4 4F               [ 4]  291 	ld	c,a
+      0000C5 06 00            [ 7]  292 	ld	b,#0
+      0000C7 E5               [11]  293 	push	hl
+      0000C8 21 10 41         [10]  294 	ld	hl,#bufrx
+      0000CB 09               [11]  295 	add	hl,bc
+      0000CC DB 59            [11]  296 	in	a,(PORTSERDATA)
+      0000CE 77               [ 7]  297 	ld	(hl),a
+      0000CF E1               [10]  298 	pop	hl
+      0000D0 79               [ 4]  299 	ld	a,c
+      0000D1 C1               [10]  300 	pop	bc
+                                    301 
+      0000D2 3C               [ 4]  302 	inc	a
+      0000D3 FE 80            [ 7]  303 	cp	#BUFRXSIZE
+      0000D5 38 01            [12]  304 	jr	c,rx_isr2
+      0000D7 AF               [ 4]  305 	xor	a
+                                    306 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 8.
+Hexadecimal [24-Bits]
+
+
+
+      0000D8                        307 rx_isr2:	
+      0000D8 32 90 41         [13]  308 	ld	(bufrxins),a
+      0000DB C9               [10]  309 	ret
+                                    310 
+                                    311 	;///////////////////////////////////////////////////////////////////////
+      0000DC                        312 mon_putchar:
+      0000DC E5               [11]  313 	push	hl
+      0000DD 21 A7 41         [10]  314 	ld	hl,#sysflag
+      0000E0 CB 46            [12]  315 	bit	0,(hl)
+      0000E2 E1               [10]  316 	pop	hl
+      0000E3 C2 CF 01         [10]  317 	jp	nz,tx_char	; Serial
+      0000E6 C3 1F 02         [10]  318 	jp	putchar		; VGA out
+                                    319 
+      0000E9                        320 mon_getchar:
+      0000E9 E5               [11]  321 	push	hl
+      0000EA 21 A7 41         [10]  322 	ld	hl,#sysflag
+      0000ED CB 46            [12]  323 	bit	0,(hl)
+      0000EF E1               [10]  324 	pop	hl
+      0000F0 C2 DD 01         [10]  325 	jp	nz,rx_char	; Serial
+      0000F3 C3 49 03         [10]  326 	jp	readkey		; PS/2 keyboard
+                                    327 	
+      0000F6                        328 mon_haskey:
+      0000F6 E5               [11]  329 	push	hl
+      0000F7 21 A7 41         [10]  330 	ld	hl,#sysflag
+      0000FA CB 46            [12]  331 	bit	0,(hl)
+      0000FC E1               [10]  332 	pop	hl
+      0000FD C2 D8 01         [10]  333 	jp	nz,has_rxchar	; Serial
+      000100 C3 3B 03         [10]  334 	jp	keypressed	; PS/2 keyboard
+                                    335 
+                                    336 	;///////////////////////////////////////////////////////////////////////
+                                    337 	;////////////////////////   INITIALIZATION   ///////////////////////////
+                                    338 	;///////////////////////////////////////////////////////////////////////
+                                    339 
+      000103                        340 init:
+                                    341 	;; Stack at the top of memory.
+      000103 31 00 41         [10]  342 	ld	sp,#STACKTOP
+                                    343 
+      000106 21 A8 00         [10]  344 	ld	hl,#rx_isr
+      000109 22 00 41         [16]  345 	ld	(isr0vector),hl
+      00010C 21 7E 00         [10]  346 	ld	hl,#ps2_isr
+      00010F 22 02 41         [16]  347 	ld	(isr1vector),hl
+      000112 21 76 00         [10]  348 	ld	hl,#timer_isr
+      000115 22 04 41         [16]  349 	ld	(isr2vector),hl
+                                    350 
+      000118 3E F0            [ 7]  351 	ld	a,#0xf0
+      00011A 32 FE 41         [13]  352 	ld	(timecount),a
+                                    353 
+      00011D AF               [ 4]  354 	xor	a
+      00011E 32 90 41         [13]  355 	ld	(bufrxins),a
+      000121 32 91 41         [13]  356 	ld	(bufrxget),a
+      000124 32 92 41         [13]  357 	ld	(bufrxqty),a
+                                    358 
+      000127 32 A2 41         [13]  359 	ld	(bufkeyqty),a
+      00012A 32 A3 41         [13]  360 	ld	(bufkeyins),a
+      00012D 32 A4 41         [13]  361 	ld	(bufkeyget),a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 9.
+Hexadecimal [24-Bits]
+
+
+
+      000130 32 A5 41         [13]  362 	ld	(kflags),a
+      000133 32 A6 41         [13]  363 	ld	(lastkey),a
+      000136 32 A7 41         [13]  364 	ld	(sysflag),a
+                                    365 
+      000139 DB 00            [11]  366 	in	a,(PORTBUTTONS)
+      00013B CB 7F            [ 8]  367 	bit	7,a
+      00013D 20 05            [12]  368 	jr	nz,init1
+                                    369 
+      00013F 3E 01            [ 7]  370 	ld	a,#1
+      000141 32 A7 41         [13]  371 	ld	(sysflag),a
+      000144                        372 init1:
+      000144 3E 01            [ 7]  373 	ld	a,#1
+      000146 D3 54            [11]  374 	out	(PORTTIMER),a
+      000148 3E 03            [ 7]  375 	ld	a,#(PORTSER_EN|PORTSER_RTSON)
+      00014A D3 58            [11]  376 	out	(PORTSERCTL),a	; Enable RTS & INT RX
+                                    377 
+                                    378         ;; Initialise global variables
+      00014C CD DA 05         [17]  379         call    gsinit
+                                    380 
+      00014F AF               [ 4]  381 	xor 	a
+      000150 D3 53            [11]  382 	out	(PORTMODE),a
+                                    383 	
+      000152 21 00 00         [10]  384 	ld	hl,#0
+      000155 2B               [ 6]  385 wait1:	dec	hl
+      000156 7C               [ 4]  386 	ld	a,h
+      000157 B5               [ 4]  387 	or	l
+      000158 20 FB            [12]  388 	jr	nz,wait1
+                                    389 	
+                                    390 	; Init CRT Video
+      00015A 3E 10            [ 7]  391 	ld	a,#0x10		;Reset scroller
+      00015C D3 53            [11]  392 	out	(PORTMODE),a
+      00015E 3E 20            [ 7]  393 	ld	a,#0x20
+      000160 D3 53            [11]  394 	out	(PORTMODE),a
+      000162 AF               [ 4]  395 	xor 	a
+      000163 D3 51            [11]  396 	out	(PORTADDRL),a
+      000165 D3 52            [11]  397 	out	(PORTADDRH),a
+      000167 32 93 41         [13]  398 	ld	(vidrow),a
+      00016A 32 94 41         [13]  399 	ld	(vidcol),a
+      00016D 32 95 41         [13]  400 	ld	(vidptr),a
+      000170 32 96 41         [13]  401 	ld	(vidptr+1),a
+      000173 32 97 41         [13]  402 	ld	(scrollcnt),a
+      000176 21 B0 0E         [10]  403 	ld	hl,#((VIDROWS-1)*VIDCOLS)
+      000179 22 98 41         [16]  404 	ld	(lastlineptr),hl
+                                    405 
+      00017C 21 00 00         [10]  406 	ld	hl,#signon
+      00017F CD A0 01         [17]  407 	call	prints
+                                    408 
+                                    409 	;in	a,(PORTBUTTONS)
+                                    410 	;bit	6,a
+                                    411 	;jp	nz,0x2000		; ROM Basic
+                                    412 
+      000182 DB 59            [11]  413 	in	a,(PORTSERDATA)
+      000184 DB 55            [11]  414 	in	a,(PORTKEY)
+      000186 DB 54            [11]  415 	in	a,(PORTTIMER)
+                                    416 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 10.
+Hexadecimal [24-Bits]
+
+
+
+      000188 CD 66 05         [17]  417 	call	lcd_init
+                                    418 
+      00018B 21 2A 00         [10]  419 	ld	hl,#msgk1
+      00018E CD 26 05         [17]  420 	call	lcd_wmsg
+                                    421 
+      000191 CD 41 05         [17]  422 	call	lcd_home2
+      000194 21 33 00         [10]  423 	ld	hl,#msgk2
+      000197 CD 26 05         [17]  424 	call	lcd_wmsg
+                                    425 
+      00019A ED 56            [ 8]  426 	im	1
+      00019C FB               [ 4]  427 	ei
+                                    428 
+      00019D C3 00 00         [10]  429 	jp	sysmon
+                                    430 
+                                    431 	;///////////////////////////////////////////////////////////////////////
+      0001A0                        432 prints:
+      0001A0 7E               [ 7]  433 	ld	a,(hl)
+      0001A1 B7               [ 4]  434 	or	a
+      0001A2 C8               [11]  435 	ret	z
+      0001A3 E5               [11]  436 	push	hl
+      0001A4 CF               [11]  437 	rst	#0x08
+      0001A5 E1               [10]  438 	pop	hl
+      0001A6 23               [ 6]  439 	inc	hl
+      0001A7 18 F7            [12]  440 	jr	prints
+                                    441 
+                                    442 	;///////////////////////////////////////////////////////////////////////
+                                    443 	;/////////////////////////   USER FUNCTIONS   //////////////////////////
+                                    444 	;///////////////////////////////////////////////////////////////////////
+                                    445 
+      0001A9                        446 user_fns:
+      0001A9 0D               [ 4]  447 	dec	c
+      0001AA 28 23            [12]  448 	jr	z,tx_char	;c = 1: TX CHAR (input in A)
+                                    449 
+      0001AC 0D               [ 4]  450 	dec	c
+      0001AD 28 29            [12]  451 	jr	z,has_rxchar	;c = 2: HAS RXCHAR (output Z flag)
+                                    452 
+      0001AF 0D               [ 4]  453 	dec	c
+      0001B0 28 2B            [12]  454 	jr	z,rx_char	;c = 3: RX CHAR (outputs Z flag & A)
+                                    455 
+      0001B2 0D               [ 4]  456 	dec	c		;c = 4
+      0001B3 0D               [ 4]  457 	dec	c		;c = 5
+      0001B4 0D               [ 4]  458 	dec	c		;c = 6
+      0001B5 0D               [ 4]  459 	dec	c		;c = 7
+                                    460 
+      0001B6 0D               [ 4]  461 	dec	c		;c = 8
+      0001B7 CA 66 05         [10]  462 	jp	z,lcd_init
+                                    463 
+      0001BA 0D               [ 4]  464 	dec	c		;c = 9
+      0001BB CA 54 05         [10]  465 	jp	z,lcd_clear
+                                    466 
+      0001BE 0D               [ 4]  467 	dec	c		;c = 10
+      0001BF CA 2F 05         [10]  468 	jp	z,lcd_home
+                                    469 
+      0001C2 0D               [ 4]  470 	dec	c		;c = 11
+      0001C3 CA 41 05         [10]  471 	jp	z,lcd_home2
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 11.
+Hexadecimal [24-Bits]
+
+
+
+                                    472 
+      0001C6 0D               [ 4]  473 	dec	c		;c = 12
+      0001C7 CA EE 04         [10]  474 	jp	z,lcd_write
+                                    475 
+      0001CA 0D               [ 4]  476 	dec	c		;c = 13
+      0001CB CA 26 05         [10]  477 	jp	z,lcd_wmsg
+                                    478 
+      0001CE C9               [10]  479 	ret
+                                    480 
+                                    481 	;///////////////////////////////////////////////////////////////////////
+                                    482 	;////////////////////   SERIAL (UART) FUNCTIONS   //////////////////////
+                                    483 	;///////////////////////////////////////////////////////////////////////
+                                    484 
+                                    485 	;///////////////////////////////////////////////////////////////////////
+      0001CF                        486 tx_char:
+                                    487         ;di
+      0001CF D3 59            [11]  488 	out	(PORTSERDATA),a
+      0001D1                        489 wait_tx:
+      0001D1 DB 58            [11]  490 	in	a,(PORTSERSTATUS)
+      0001D3 CB 4F            [ 8]  491 	bit	1,a
+      0001D5 20 FA            [12]  492 	jr	nz,wait_tx
+                                    493 	;ei
+      0001D7 C9               [10]  494 	ret
+                                    495 
+                                    496 	;///////////////////////////////////////////////////////////////////////
+      0001D8                        497 has_rxchar:
+      0001D8 3A 92 41         [13]  498 	ld	a,(bufrxqty)
+      0001DB B7               [ 4]  499 	or	a
+      0001DC C9               [10]  500 	ret
+                                    501 
+                                    502 	;///////////////////////////////////////////////////////////////////////
+      0001DD                        503 rx_char:
+      0001DD 3A 92 41         [13]  504 	ld	a,(bufrxqty)
+      0001E0 B7               [ 4]  505 	or	a
+      0001E1 20 01            [12]  506 	jr	nz,rx_char0
+      0001E3 C9               [10]  507 	ret		;; No char available, return Z
+                                    508 
+      0001E4                        509 rx_char0:
+      0001E4 F3               [ 4]  510 	di
+      0001E5 3A 92 41         [13]  511 	ld	a,(bufrxqty)
+      0001E8 3D               [ 4]  512 	dec	a
+      0001E9 32 92 41         [13]  513 	ld	(bufrxqty),a
+      0001EC FE 08            [ 7]  514 	cp	#8
+      0001EE 20 04            [12]  515 	jr	nz,rx_char2
+                                    516 
+      0001F0 3E 03            [ 7]  517 	ld	a,#(PORTSER_EN|PORTSER_RTSON)
+      0001F2 D3 58            [11]  518 	out	(PORTSERCTL),a	; Enable RTS & INT RX
+                                    519 
+      0001F4                        520 rx_char2:
+      0001F4 E5               [11]  521 	push	hl
+                                    522 
+      0001F5 C5               [11]  523 	push	bc
+      0001F6 3A 91 41         [13]  524 	ld	a,(bufrxget)
+      0001F9 4F               [ 4]  525 	ld	c,a
+      0001FA 06 00            [ 7]  526 	ld	b,#0
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 12.
+Hexadecimal [24-Bits]
+
+
+
+      0001FC 21 10 41         [10]  527 	ld	hl,#bufrx
+      0001FF 09               [11]  528 	add	hl,bc
+      000200 C1               [10]  529 	pop	bc
+                                    530 
+      000201 3C               [ 4]  531 	inc	a
+      000202 FE 80            [ 7]  532 	cp	#BUFRXSIZE
+      000204 20 03            [12]  533 	jr	nz,rx_char1	;; Condition NZ
+                                    534 
+      000206 AF               [ 4]  535 	xor	a
+      000207 FE 01            [ 7]  536 	cp	#1		;; Force condition NZ
+                                    537 
+      000209                        538 rx_char1:
+      000209 32 91 41         [13]  539 	ld	(bufrxget),a
+      00020C 7E               [ 7]  540 	ld	a,(hl)
+      00020D E1               [10]  541 	pop	hl
+      00020E FB               [ 4]  542 	ei
+      00020F C9               [10]  543 	ret			;; Always return NZ
+                                    544 
+                                    545 	;///////////////////////////////////////////////////////////////////////
+                                    546 	;//////////////////////   CRT (VGA) FUNCTIONS   ////////////////////////
+                                    547 	;///////////////////////////////////////////////////////////////////////
+                                    548 
+      000210 3A 94 41         [13]  549 putbs:	ld	a,(vidcol)
+      000213 B7               [ 4]  550 	or	a
+      000214 C8               [11]  551 	ret	z
+      000215 3D               [ 4]  552 	dec	a
+      000216 32 94 41         [13]  553 	ld	(vidcol),a
+      000219 2A 95 41         [16]  554 	ld	hl,(vidptr)
+      00021C 2B               [ 6]  555 	dec	hl
+      00021D 18 7D            [12]  556 	jr	putlf2
+                                    557 
+      00021F                        558 putchar:
+      00021F F5               [11]  559 	push	af
+      000220 E5               [11]  560 	push	hl
+      000221 CD 27 02         [17]  561 	call	_putchar
+      000224 E1               [10]  562 	pop	hl
+      000225 F1               [10]  563 	pop	af
+      000226 C9               [10]  564 	ret
+                                    565 
+      000227                        566 _putchar:
+      000227 FE 0D            [ 7]  567 	cp	#13
+      000229 28 40            [12]  568 	jr	z,putcr
+      00022B FE 0A            [ 7]  569 	cp	#10
+      00022D 28 59            [12]  570 	jr	z,putlf
+      00022F FE 0C            [ 7]  571 	cp	#12
+      000231 28 76            [12]  572 	jr	z,putclr
+      000233 FE 08            [ 7]  573 	cp	#8
+      000235 28 D9            [12]  574 	jr	z,putbs
+                                    575 	
+      000237 D3 50            [11]  576 	out	(PORTDATA),a
+      000239 2A 95 41         [16]  577 	ld	hl,(vidptr)
+      00023C 23               [ 6]  578 	inc	hl
+      00023D 22 95 41         [16]  579 	ld	(vidptr),hl
+                                    580 
+      000240 3A 94 41         [13]  581 	ld	a,(vidcol)
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 13.
+Hexadecimal [24-Bits]
+
+
+
+      000243 FE 4F            [ 7]  582 	cp	#(VIDCOLS-1)
+      000245 28 05            [12]  583 	jr	z,putcnextrow
+      000247 3C               [ 4]  584 	inc	a
+      000248 32 94 41         [13]  585 	ld	(vidcol),a
+      00024B C9               [10]  586 	ret
+                                    587 
+      00024C                        588 putcnextrow:
+      00024C AF               [ 4]  589 	xor	a
+      00024D 32 94 41         [13]  590 	ld	(vidcol),a
+      000250 3A 93 41         [13]  591 	ld	a,(vidrow)
+      000253 FE 2F            [ 7]  592 	cp	#(VIDROWS-1)
+      000255 28 05            [12]  593 	jr	z,nextrow1
+      000257 3C               [ 4]  594 	inc	a
+      000258 32 93 41         [13]  595 	ld	(vidrow),a
+      00025B C9               [10]  596 	ret
+                                    597 
+      00025C                        598 nextrow1:
+      00025C 2A 95 41         [16]  599 	ld	hl,(vidptr)
+      00025F D5               [11]  600 	push	de
+      000260 11 B0 FF         [10]  601 	ld	de,#-VIDCOLS
+      000263 19               [11]  602 	add	hl,de
+      000264 D1               [10]  603 	pop	de
+      000265 22 95 41         [16]  604 	ld	(vidptr),hl
+      000268 C3 DC 02         [10]  605 	jp	scroll_crt
+                                    606 
+      00026B 3A 94 41         [13]  607 putcr:	ld	a,(vidcol)
+      00026E B7               [ 4]  608 	or	a
+      00026F C8               [11]  609 	ret	z
+      000270 D5               [11]  610 	push	de
+      000271 5F               [ 4]  611 	ld	e,a
+      000272 16 00            [ 7]  612 	ld	d,#0
+      000274 2A 95 41         [16]  613 	ld	hl,(vidptr)
+      000277 AF               [ 4]  614 	xor	a
+      000278 32 94 41         [13]  615 	ld	(vidcol),a
+      00027B ED 52            [15]  616 	sbc	hl,de
+      00027D D1               [10]  617 	pop	de
+      00027E 22 95 41         [16]  618 	ld	(vidptr),hl
+      000281 7D               [ 4]  619 	ld	a,l
+      000282 D3 51            [11]  620 	out	(PORTADDRL),a
+      000284 7C               [ 4]  621 	ld	a,h
+      000285 D3 52            [11]  622 	out	(PORTADDRH),a
+      000287 C9               [10]  623 	ret
+                                    624 	
+      000288 3A 93 41         [13]  625 putlf:	ld	a,(vidrow)
+      00028B FE 2F            [ 7]  626 	cp	#(VIDROWS-1)
+      00028D 28 17            [12]  627 	jr	z,putlf1
+                                    628 	
+      00028F 3C               [ 4]  629 	inc	a
+      000290 32 93 41         [13]  630 	ld	(vidrow),a
+      000293 2A 95 41         [16]  631 	ld	hl,(vidptr)
+      000296 D5               [11]  632 	push	de
+      000297 11 50 00         [10]  633 	ld	de,#VIDCOLS
+      00029A 19               [11]  634 	add	hl,de
+      00029B D1               [10]  635 	pop	de
+                                    636 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 14.
+Hexadecimal [24-Bits]
+
+
+
+      00029C 22 95 41         [16]  637 putlf2:	ld	(vidptr),hl
+      00029F 7D               [ 4]  638 	ld	a,l
+      0002A0 D3 51            [11]  639 	out	(PORTADDRL),a
+      0002A2 7C               [ 4]  640 	ld	a,h
+      0002A3 D3 52            [11]  641 	out	(PORTADDRH),a
+      0002A5 C9               [10]  642 	ret
+                                    643 	
+      0002A6 C3 DC 02         [10]  644 putlf1:	jp	scroll_crt
+                                    645 
+      0002A9                        646 putclr:
+      0002A9 3E 10            [ 7]  647 	ld	a,#0x10		;Reset scroller
+      0002AB D3 53            [11]  648 	out	(PORTMODE),a
+      0002AD 3E 20            [ 7]  649 	ld	a,#0x20
+      0002AF D3 53            [11]  650 	out	(PORTMODE),a
+                                    651 
+      0002B1 AF               [ 4]  652 	xor	a
+      0002B2 32 97 41         [13]  653 	ld	(scrollcnt),a
+      0002B5 32 93 41         [13]  654 	ld	(vidrow),a
+      0002B8 32 94 41         [13]  655 	ld	(vidcol),a
+      0002BB 32 95 41         [13]  656 	ld	(vidptr),a
+      0002BE 32 96 41         [13]  657 	ld	(vidptr+1),a
+      0002C1 D3 51            [11]  658 	out	(PORTADDRL),a
+      0002C3 D3 52            [11]  659 	out	(PORTADDRH),a
+      0002C5 21 B0 0E         [10]  660 	ld	hl,#((VIDROWS-1)*VIDCOLS)
+      0002C8 22 98 41         [16]  661 	ld	(lastlineptr),hl
+                                    662 
+      0002CB 21 00 0F         [10]  663 	ld	hl,#(VIDCOLS*VIDROWS)
+      0002CE AF               [ 4]  664 putclr1:xor	a
+      0002CF D3 50            [11]  665 	out	(PORTDATA),a
+      0002D1 2B               [ 6]  666 	dec	hl
+      0002D2 7C               [ 4]  667 	ld	a,h
+      0002D3 B5               [ 4]  668 	or	l
+      0002D4 20 F8            [12]  669 	jr	nz,putclr1
+      0002D6 AF               [ 4]  670 	xor	a
+      0002D7 D3 51            [11]  671 	out	(PORTADDRL),a
+      0002D9 D3 52            [11]  672 	out	(PORTADDRH),a
+      0002DB C9               [10]  673 	ret
+                                    674 
+                                    675 	;///////////////////////////////////////////////////////////////////////
+      0002DC                        676 scroll_crt:
+      0002DC C5               [11]  677 	push	bc
+      0002DD D5               [11]  678 	push	de
+      0002DE E5               [11]  679 	push	hl
+                                    680 
+      0002DF 3A 97 41         [13]  681 	ld	a,(scrollcnt)
+      0002E2 3C               [ 4]  682 	inc	a
+      0002E3 FE 30            [ 7]  683 	cp	#VIDROWS
+      0002E5 38 01            [12]  684 	jr	c,scroll_crt0a
+                                    685 
+      0002E7 AF               [ 4]  686 	xor	a
+                                    687 
+      0002E8                        688 scroll_crt0a:
+      0002E8 32 97 41         [13]  689 	ld	(scrollcnt),a
+      0002EB 47               [ 4]  690 	ld	b,a
+      0002EC E6 0F            [ 7]  691 	and	#0x0f
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 15.
+Hexadecimal [24-Bits]
+
+
+
+      0002EE F6 10            [ 7]  692 	or	#0x10
+      0002F0 D3 53            [11]  693 	out	(PORTMODE),a
+      0002F2 78               [ 4]  694 	ld	a,b
+      0002F3 CB 3F            [ 8]  695 	srl	a
+      0002F5 CB 3F            [ 8]  696 	srl	a
+      0002F7 CB 3F            [ 8]  697 	srl	a
+      0002F9 CB 3F            [ 8]  698 	srl	a
+      0002FB F6 20            [ 7]  699 	or	#0x20
+      0002FD D3 53            [11]  700 	out	(PORTMODE),a
+                                    701 
+      0002FF 2A 98 41         [16]  702 	ld	hl,(lastlineptr)
+      000302 11 B0 0E         [10]  703 	ld	de,#((VIDROWS-1)*VIDCOLS)
+      000305 37               [ 4]  704 	scf
+      000306 3F               [ 4]  705 	ccf
+      000307 ED 52            [15]  706 	sbc	hl,de
+      000309 7C               [ 4]  707 	ld	a,h
+      00030A B5               [ 4]  708 	or	l
+      00030B 28 07            [12]  709 	jr	z,scroll_crt0b
+      00030D 2A 98 41         [16]  710 	ld	hl,(lastlineptr)
+      000310 11 50 00         [10]  711 	ld	de,#VIDCOLS
+      000313 19               [11]  712 	add	hl,de
+                                    713 
+      000314                        714 scroll_crt0b:
+      000314 22 98 41         [16]  715 	ld	(lastlineptr),hl
+                                    716 	;ld	hl,(lastlineptr)
+      000317 7D               [ 4]  717 	ld	a,l
+      000318 D3 51            [11]  718 	out	(PORTADDRL),a
+      00031A 7C               [ 4]  719 	ld	a,h
+      00031B D3 52            [11]  720 	out	(PORTADDRH),a
+      00031D AF               [ 4]  721 	xor	a
+      00031E 06 50            [ 7]  722 	ld	b,#VIDCOLS
+      000320                        723 scroll3:
+      000320 D3 50            [11]  724 	out	(PORTDATA),a
+      000322 10 FC            [13]  725 	djnz	scroll3
+                                    726 
+      000324 3A 94 41         [13]  727 	ld	a,(vidcol)
+      000327 5F               [ 4]  728 	ld	e,a
+      000328 16 00            [ 7]  729 	ld	d,#0
+      00032A 2A 98 41         [16]  730 	ld	hl,(lastlineptr)
+      00032D 19               [11]  731 	add	hl,de
+                                    732 
+      00032E 22 95 41         [16]  733 	ld	(vidptr),hl
+      000331 7D               [ 4]  734 	ld	a,l
+      000332 D3 51            [11]  735 	out	(PORTADDRL),a
+      000334 7C               [ 4]  736 	ld	a,h
+      000335 D3 52            [11]  737 	out	(PORTADDRH),a
+                                    738 
+      000337 E1               [10]  739 	pop	hl
+      000338 D1               [10]  740 	pop	de
+      000339 C1               [10]  741 	pop	bc
+      00033A C9               [10]  742 	ret
+                                    743 
+                                    744 	;///////////////////////////////////////////////////////////////////////
+                                    745 	;////////////////////   PS/2 KEYBOARD FUNCTIONS   //////////////////////
+                                    746 	;///////////////////////////////////////////////////////////////////////
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 16.
+Hexadecimal [24-Bits]
+
+
+
+                                    747 
+      00033B                        748 keypressed:
+      00033B 3A A6 41         [13]  749 	ld	a,(lastkey)
+      00033E B7               [ 4]  750 	or	a
+      00033F C0               [11]  751 	ret	nz
+      000340 CD 5D 03         [17]  752 	call	_readkey
+      000343 C8               [11]  753 	ret	z
+      000344 32 A6 41         [13]  754 	ld	(lastkey),a
+      000347 B7               [ 4]  755 	or	a
+      000348 C9               [10]  756 	ret
+                                    757 
+      000349 3A A6 41         [13]  758 readkey:ld	a,(lastkey)
+      00034C B7               [ 4]  759 	or	a
+      00034D 28 08            [12]  760 	jr	z,readk1
+      00034F F5               [11]  761 	push	af
+      000350 AF               [ 4]  762 	xor	a
+      000351 32 A6 41         [13]  763 	ld	(lastkey),a
+      000354 F1               [10]  764 	pop	af
+      000355 B7               [ 4]  765 	or	a
+      000356 C9               [10]  766 	ret
+                                    767 
+      000357 CD 5D 03         [17]  768 readk1:	call	_readkey
+      00035A 28 FB            [12]  769 	jr	z,readk1
+      00035C C9               [10]  770 	ret
+                                    771 
+      00035D                        772 _readkey:
+      00035D F3               [ 4]  773 	di
+      00035E 3A A2 41         [13]  774 	ld	a,(bufkeyqty)
+      000361 B7               [ 4]  775 	or	a
+      000362 20 02            [12]  776 	jr	nz,keyt1
+      000364 FB               [ 4]  777 	ei
+      000365 C9               [10]  778 	ret
+                                    779 
+      000366                        780 keyt1:
+      000366 3D               [ 4]  781 	dec	a
+      000367 32 A2 41         [13]  782 	ld	(bufkeyqty),a
+                                    783 
+      00036A E5               [11]  784 	push	hl
+      00036B C5               [11]  785 	push	bc
+      00036C 3A A4 41         [13]  786 	ld	a,(bufkeyget)
+      00036F 4F               [ 4]  787 	ld	c,a
+      000370 06 00            [ 7]  788 	ld	b,#0
+      000372 21 9A 41         [10]  789 	ld	hl,#bufkey
+      000375 09               [11]  790 	add	hl,bc
+      000376 C1               [10]  791 	pop	bc
+                                    792 
+      000377 3C               [ 4]  793 	inc	a
+      000378 FE 08            [ 7]  794 	cp	#BUFKEYSIZE
+      00037A 20 01            [12]  795 	jr	nz,keyt2
+                                    796 
+      00037C AF               [ 4]  797 	xor	a
+                                    798 
+      00037D                        799 keyt2:
+      00037D 32 A4 41         [13]  800 	ld	(bufkeyget),a
+      000380 7E               [ 7]  801 	ld	a,(hl)			; scan code here
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 17.
+Hexadecimal [24-Bits]
+
+
+
+      000381 E1               [10]  802 	pop	hl
+      000382 FB               [ 4]  803 	ei
+                                    804 
+      000383 FE F0            [ 7]  805 	cp	#0xf0
+      000385 20 09            [12]  806 	jr	nz,keyt6
+                                    807 
+      000387 E5               [11]  808 	push	hl
+      000388 21 A5 41         [10]  809 	ld	hl,#kflags
+      00038B CB DE            [15]  810 	set	3,(hl)
+      00038D E1               [10]  811 	pop	hl
+      00038E AF               [ 4]  812 	xor	a
+      00038F C9               [10]  813 	ret
+                                    814 
+      000390                        815 keyt6:
+      000390 C5               [11]  816 	push	bc
+      000391 E5               [11]  817 	push	hl
+                                    818 	
+      000392 21 A5 41         [10]  819 	ld	hl,#kflags
+      000395 CB 5E            [12]  820 	bit	3,(hl)
+      000397 28 1B            [12]  821 	jr	z,keyt3a		; No previous BREAK Code
+                                    822 	
+      000399 CB 9E            [15]  823 	res	3,(hl)			; Clear Break code flag
+                                    824 	
+      00039B FE 12            [ 7]  825 	cp	#0x12			; LShift	
+      00039D 20 04            [12]  826 	jr	nz,keyt6a
+      00039F CB 86            [15]  827 	res	0,(hl)
+      0003A1 18 0E            [12]  828 	jr	keyt6c
+                                    829 
+      0003A3                        830 keyt6a:
+      0003A3 FE 59            [ 7]  831 	cp	#0x59			; RShift	
+      0003A5 20 04            [12]  832 	jr	nz,keyt6b
+      0003A7 CB 8E            [15]  833 	res	1,(hl)
+      0003A9 18 06            [12]  834 	jr	keyt6c
+                                    835 
+      0003AB                        836 keyt6b:
+      0003AB FE 14            [ 7]  837 	cp	#0x14			; LCTRL	
+      0003AD 20 02            [12]  838 	jr	nz,keyt6c
+      0003AF CB A6            [15]  839 	res	4,(hl)
+                                    840 
+      0003B1                        841 keyt6c:
+      0003B1 AF               [ 4]  842 	xor	a
+      0003B2 18 5E            [12]  843 	jr	keyt4
+                                    844 
+      0003B4                        845 keyt3a:
+      0003B4 FE 12            [ 7]  846 	cp	#0x12			; LShift	
+      0003B6 20 04            [12]  847 	jr	nz,keyt3b
+      0003B8 CB C6            [15]  848 	set	0,(hl)
+      0003BA 18 56            [12]  849 	jr	keyt4
+                                    850 
+      0003BC                        851 keyt3b:
+      0003BC FE 59            [ 7]  852 	cp	#0x59			; RShift	
+      0003BE 20 04            [12]  853 	jr	nz,keyt3c
+      0003C0 CB CE            [15]  854 	set	1,(hl)
+      0003C2 18 4E            [12]  855 	jr	keyt4
+                                    856 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 18.
+Hexadecimal [24-Bits]
+
+
+
+      0003C4                        857 keyt3c:
+      0003C4 FE 58            [ 7]  858 	cp	#0x58			; Caps	
+      0003C6 20 07            [12]  859 	jr	nz,keyt3d
+      0003C8 7E               [ 7]  860 	ld	a,(hl)
+      0003C9 EE 04            [ 7]  861 	xor	#0x04
+      0003CB 77               [ 7]  862 	ld	(hl),a
+      0003CC AF               [ 4]  863 	xor	a
+      0003CD 18 43            [12]  864 	jr	keyt4
+                                    865 
+      0003CF                        866 keyt3d:
+      0003CF FE 14            [ 7]  867 	cp 	#0x14			; LCTRL
+      0003D1 20 04            [12]  868 	jr	nz,keyt3e
+      0003D3 CB E6            [15]  869 	set	4,(HL)
+      0003D5 18 3B            [12]  870 	jr	keyt4
+                                    871 
+      0003D7                        872 keyt3e:
+      0003D7 21 15 04         [10]  873 	ld	hl,#tab_xlat
+      0003DA 4F               [ 4]  874 	ld	c,a
+                                    875 
+      0003DB                        876 keyt3:
+      0003DB 7E               [ 7]  877 	ld	a,(hl)
+      0003DC B7               [ 4]  878 	or	a
+      0003DD 28 33            [12]  879 	jr	z,keyt4			; end of table
+      0003DF B9               [ 4]  880 	cp	c
+      0003E0 28 06            [12]  881 	jr	z,keyt5			; found
+      0003E2 23               [ 6]  882 	inc	hl
+      0003E3 23               [ 6]  883 	inc	hl
+      0003E4 23               [ 6]  884 	inc	hl
+      0003E5 23               [ 6]  885 	inc	hl
+      0003E6 18 F3            [12]  886 	jr	keyt3
+                                    887 
+      0003E8                        888 keyt5:
+      0003E8 23               [ 6]  889 	inc	hl
+      0003E9 01 A5 41         [10]  890 	ld	bc,#kflags
+      0003EC 0A               [ 7]  891 	ld	a,(bc)
+      0003ED 4F               [ 4]  892 	ld	c,a
+      0003EE E6 03            [ 7]  893 	and	#0x03			; LShift | RShift
+      0003F0 79               [ 4]  894 	ld	a,c
+      0003F1 28 03            [12]  895 	jr	z,keyt5a
+      0003F3 23               [ 6]  896 	inc	hl
+      0003F4 18 07            [12]  897 	jr	keyt5b
+                                    898 
+      0003F6                        899 keyt5a:
+      0003F6 79               [ 4]  900 	ld	a,c
+      0003F7 E6 04            [ 7]  901 	and	#0x04			; Caps
+      0003F9 28 02            [12]  902 	jr	z,keyt5b
+      0003FB 23               [ 6]  903 	inc	hl
+      0003FC 23               [ 6]  904 	inc	hl
+                                    905 
+      0003FD                        906 keyt5b:
+      0003FD CB 61            [ 8]  907 	bit	4,c			; LCTRL
+      0003FF 7E               [ 7]  908 	ld	a,(hl)
+      000400 28 0F            [12]  909 	jr	z,keyt4a
+                                    910 
+      000402 CB AF            [ 8]  911 	res	5,a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 19.
+Hexadecimal [24-Bits]
+
+
+
+      000404 FE 41            [ 7]  912 	cp	#'A'
+      000406 38 08            [12]  913 	jr	c,keyt4b
+      000408 FE 5B            [ 7]  914 	cp	#'Z'+1
+      00040A 30 04            [12]  915 	jr	nc,keyt4b
+      00040C D6 40            [ 7]  916 	sub	#0x40
+      00040E 18 01            [12]  917 	jr	keyt4a
+                                    918 
+      000410                        919 keyt4b:	
+      000410 AF               [ 4]  920 	xor	a
+                                    921 
+      000411                        922 keyt4a:
+      000411 B7               [ 4]  923 	or	a			; not 0 when there's a valid symbol
+                                    924 
+      000412                        925 keyt4:
+      000412 E1               [10]  926 	pop	hl
+      000413 C1               [10]  927 	pop	bc
+      000414 C9               [10]  928 	ret		
+                                    929 
+                                    930 	;///////////////////////////////////////////////////////////////////////
+                                    931 
+      000415                        932 tab_xlat:
+                                    933 	; US QWERTY compatible symbols
+                                    934 	;	SCAN NORM SHIFT CAPS
+      000415 1C 61 41 41            935 	.byte	0x1c, 'a', 'A', 'A'
+      000419 32 62 42 42            936 	.byte	0x32, 'b', 'B', 'B'
+      00041D 21 63 43 43            937 	.byte	0x21, 'c', 'C', 'C'
+      000421 23 64 44 44            938 	.byte	0x23, 'd', 'D', 'D'
+      000425 24 65 45 45            939 	.byte	0x24, 'e', 'E', 'E'
+      000429 2B 66 46 46            940 	.byte	0x2b, 'f', 'F', 'F'
+      00042D 34 67 47 47            941 	.byte	0x34, 'g', 'G', 'G'
+      000431 33 68 48 48            942 	.byte	0x33, 'h', 'H', 'H'
+      000435 43 69 49 49            943 	.byte	0x43, 'i', 'I', 'I'
+      000439 3B 6A 4A 4A            944 	.byte	0x3b, 'j', 'J', 'J'
+      00043D 42 6B 4B 4B            945 	.byte	0x42, 'k', 'K', 'K'
+      000441 4B 6C 4C 4C            946 	.byte	0x4b, 'l', 'L', 'L'
+      000445 3A 6D 4D 4D            947 	.byte	0x3a, 'm', 'M', 'M'
+      000449 31 6E 4E 4E            948 	.byte	0x31, 'n', 'N', 'N'
+      00044D 44 6F 4F 4F            949 	.byte	0x44, 'o', 'O', 'O'
+      000451 4D 70 50 50            950 	.byte	0x4D, 'p', 'P', 'P'
+      000455 15 71 51 51            951 	.byte	0x15, 'q', 'Q', 'Q'
+      000459 2D 72 52 52            952 	.byte	0x2d, 'r', 'R', 'R'
+      00045D 1B 73 53 53            953 	.byte	0x1b, 's', 'S', 'S'
+      000461 2C 74 54 54            954 	.byte	0x2c, 't', 'T', 'T'
+      000465 3C 75 55 55            955 	.byte	0x3c, 'u', 'U', 'U'
+      000469 2A 76 56 56            956 	.byte	0x2a, 'v', 'V', 'V'
+      00046D 1D 77 57 57            957 	.byte	0x1d, 'w', 'W', 'W'
+      000471 22 78 58 58            958 	.byte	0x22, 'x', 'X', 'X'
+      000475 35 79 59 59            959 	.byte	0x35, 'y', 'Y', 'Y'
+      000479 1A 7A 5A 5A            960 	.byte	0x1a, 'z', 'Z', 'Z'
+      00047D 45 30 29 30            961 	.byte	0x45, '0', ')', '0'
+      000481 16 31 21 31            962 	.byte	0x16, '1', '!', '1'
+      000485 1E 32 40 32            963 	.byte	0x1e, '2', '@', '2'
+      000489 26 33 23 33            964 	.byte	0x26, '3', '#', '3'
+      00048D 25 34 24 34            965 	.byte	0x25, '4', '$', '4'
+      000491 2E 35 25 35            966 	.byte	0x2e, '5', '%', '5'
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 20.
+Hexadecimal [24-Bits]
+
+
+
+      000495 3D 37 26 37            967 	.byte	0x3d, '7', '&', '7'
+      000499 3E 38 2A 38            968 	.byte	0x3e, '8', '*', '8'
+      00049D 3E 38 2A 38            969 	.byte	0x3e, '8', '*', '8'
+      0004A1 46 39 28 39            970 	.byte	0x46, '9', '(', '9'
+      0004A5 4E 2D 5F 2D            971 	.byte	0x4e, '-', '_', '-'
+      0004A9 55 3D 2B 3D            972 	.byte	0x55, '=', '+', '='
+      0004AD 66 08 08 08            973 	.byte	0x66, 0x08,0x08,0x08
+      0004B1 29 20 20 20            974 	.byte	0x29, ' ', ' ', ' '
+      0004B5 0D 09 09 09            975 	.byte	0x0d, 0x09,0x09,0x09
+      0004B9 5A 0D 0D 0D            976 	.byte	0x5a, 0x0d,0x0d,0x0d
+      0004BD 76 1B 1B 1B            977 	.byte	0x76, 0x1b,0x1b,0x1b
+      0004C1 0E 27 22 27            978 	.byte	0x0e, 0x27,'"', 0x27
+                                    979 	; Brazilian ABNT2 codes
+                                    980 	;	SCAN NORM SHIFT CAPS
+      0004C5 36 36 22 36            981 	.byte	0x36, '6', '"', '6'
+      0004C9 61 5C 7C 5C            982 	.byte	0x61, '\', '|', '\'
+      0004CD 41 2C 3C 2C            983 	.byte	0x41, ',', '<', ','
+      0004D1 49 2E 3E 2E            984 	.byte	0x49, '.', '>', '.'
+      0004D5 54 27 60 27            985 	.byte	0x54, 0x27, '`', 0x27 
+      0004D9 5B 5B 7B 5B            986 	.byte	0x5b, '[', '{', '['
+      0004DD 52 7E 5E 7E            987 	.byte	0x52, '~', '^', '~'
+      0004E1 5D 5D 7D 5D            988 	.byte	0x5d, ']', '}', ']'
+      0004E5 4A 3B 3A 3B            989 	.byte	0x4a, ';', ':', ';'
+      0004E9 51 2F 3F 2F            990 	.byte	0x51, '/', '?', '/'
+      0004ED 00                     991 	.byte	0x00
+                                    992 
+                                    993 	;///////////////////////////////////////////////////////////////////////
+                                    994 	;//////////////////////   LCD DISPLAY FUNCTIONS   //////////////////////
+                                    995 	;///////////////////////////////////////////////////////////////////////
+                                    996 
+      0004EE                        997 lcd_write:
+                                    998 	;RS R/W DB7 DB6 DB5 DB4
+                                    999 	;1   0   D7  D6  D5  D4
+      0004EE C5               [11] 1000 	push	bc
+                                   1001 
+      0004EF F5               [11] 1002 	push	af
+      0004F0 3A A8 41         [13] 1003 	ld	a,(dispcol)
+      0004F3 FE 10            [ 7] 1004 	cp	#16
+      0004F5 20 05            [12] 1005 	jr	nz,lcd_w1
+      0004F7 CD 41 05         [17] 1006 	call	lcd_home2
+      0004FA 18 07            [12] 1007 	jr	lcd_w2
+      0004FC                       1008 lcd_w1:
+      0004FC FE 20            [ 7] 1009 	cp	#32
+      0004FE 20 03            [12] 1010 	jr	nz,lcd_w2
+      000500 CD 2F 05         [17] 1011 	call	lcd_home
+      000503                       1012 lcd_w2:
+      000503 3A A8 41         [13] 1013 	ld	a,(dispcol)
+      000506 3C               [ 4] 1014 	inc	a
+      000507 32 A8 41         [13] 1015 	ld	(dispcol),a
+      00050A F1               [10] 1016 	pop	af
+                                   1017 	
+      00050B 4F               [ 4] 1018 	ld	c,a
+      00050C E6 F0            [ 7] 1019 	and	#0xf0
+      00050E F6 01            [ 7] 1020 	or	#0x01
+      000510 CD B9 05         [17] 1021 	call	lcd_out
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 21.
+Hexadecimal [24-Bits]
+
+
+
+                                   1022 
+                                   1023 	;RS R/W DB7 DB6 DB5 DB4
+                                   1024 	;1   0   D3  D2  D1  D0
+      000513 79               [ 4] 1025 	ld	a,c		
+      000514 CB 27            [ 8] 1026 	sla	a
+      000516 CB 27            [ 8] 1027 	sla	a
+      000518 CB 27            [ 8] 1028 	sla	a
+      00051A CB 27            [ 8] 1029 	sla	a
+      00051C F6 01            [ 7] 1030 	or	#0x01
+      00051E CD B9 05         [17] 1031 	call	lcd_out
+                                   1032 
+      000521 CD C8 05         [17] 1033 	call	delay_5ms
+                                   1034 
+      000524 C1               [10] 1035 	pop	bc
+                                   1036 
+      000525 C9               [10] 1037 	ret
+                                   1038 
+                                   1039 ;///////////////////////////////////////////////////////////////////////////////
+      000526                       1040 lcd_wmsg:
+      000526 7E               [ 7] 1041 	ld	a,(hl)
+      000527 B7               [ 4] 1042 	or	a
+      000528 C8               [11] 1043 	ret	z
+      000529 CD EE 04         [17] 1044 	call	lcd_write
+      00052C 23               [ 6] 1045 	inc	hl
+      00052D 18 F7            [12] 1046 	jr	lcd_wmsg
+                                   1047 
+                                   1048 ;///////////////////////////////////////////////////////////////////////////////
+      00052F                       1049 lcd_home:
+                                   1050 	;RS R/W DB7 DB6 DB5 DB4
+                                   1051 	;0   0   0   0   0   0
+      00052F 3E 00            [ 7] 1052 	ld	a,#0b00000000
+      000531 CD B9 05         [17] 1053 	call	lcd_out
+                                   1054 	;RS R/W DB3 DB2 DB1 DB0
+                                   1055 	;0   0   0   0   1   0
+      000534 3E 20            [ 7] 1056 	ld	a,#0b00100000
+      000536 CD B9 05         [17] 1057 	call	lcd_out
+                                   1058 
+      000539 CD C8 05         [17] 1059 	call	delay_5ms
+      00053C AF               [ 4] 1060 	xor a
+      00053D 32 A8 41         [13] 1061 	ld (dispcol),a
+      000540 C9               [10] 1062 	ret
+                                   1063 
+                                   1064 ;///////////////////////////////////////////////////////////////////////////////
+      000541                       1065 lcd_home2:
+                                   1066 	;RS R/W DB7 DB6 DB5 DB4
+                                   1067 	;0   0   1   1   0   0
+      000541 3E C0            [ 7] 1068 	ld	a,#0b11000000
+      000543 CD B9 05         [17] 1069 	call	lcd_out
+                                   1070 	;RS R/W DB3 DB2 DB1 DB0
+                                   1071 	;0   0   0   0   0   0
+      000546 3E 00            [ 7] 1072 	ld	a,#0b00000000
+      000548 CD B9 05         [17] 1073 	call	lcd_out
+                                   1074 
+      00054B CD C8 05         [17] 1075 	call	delay_5ms
+      00054E 3E 10            [ 7] 1076 	ld a,#16
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 22.
+Hexadecimal [24-Bits]
+
+
+
+      000550 32 A8 41         [13] 1077 	ld (dispcol),a
+      000553 C9               [10] 1078 	ret
+                                   1079 
+                                   1080 ;///////////////////////////////////////////////////////////////////////////////
+      000554                       1081 lcd_clear:
+                                   1082 	;RS R/W DB7 DB6 DB5 DB4
+                                   1083 	;0   0   0   0   0   0
+      000554 3E 00            [ 7] 1084 	ld	a,#0b00000000
+      000556 CD B9 05         [17] 1085 	call	lcd_out
+                                   1086 	;RS R/W DB3 DB2 DB1 DB0
+                                   1087 	;0   0   0   0   0   1
+      000559 3E 10            [ 7] 1088 	ld	a,#0b00010000
+      00055B CD B9 05         [17] 1089 	call	lcd_out
+                                   1090 
+      00055E CD C8 05         [17] 1091 	call	delay_5ms
+      000561 AF               [ 4] 1092 	xor a
+      000562 32 A8 41         [13] 1093 	ld (dispcol),a
+      000565 C9               [10] 1094 	ret
+                                   1095 
+                                   1096 ;///////////////////////////////////////////////////////////////////////////////
+      000566                       1097 lcd_init:
+      000566 CD D1 05         [17] 1098 	call	delay_15ms
+                                   1099 
+                                   1100 	;RS R/W DB7 DB6 DB5 DB4
+                                   1101 	;0   0   0   0   1   1
+      000569 3E 30            [ 7] 1102 	ld	a,#0b00110000
+      00056B CD B9 05         [17] 1103 	call	lcd_out
+      00056E CD C8 05         [17] 1104 	call	delay_5ms
+      000571 3E 30            [ 7] 1105 	ld	a,#0b00110000
+      000573 CD B9 05         [17] 1106 	call	lcd_out
+      000576 CD C8 05         [17] 1107 	call	delay_5ms
+                                   1108 
+                                   1109 	;RS R/W DB7 DB6 DB5 DB4
+                                   1110 	;0   0   0   0   1   0
+      000579 3E 20            [ 7] 1111 	ld	a,#0b00100000		; Set 4 bit mode
+      00057B CD B9 05         [17] 1112 	call	lcd_out
+                                   1113 
+      00057E CD C8 05         [17] 1114 	call	delay_5ms
+                                   1115 
+                                   1116 	;RS R/W DB7 DB6 DB5 DB4
+                                   1117 	;0   0   0   0   1   0
+      000581 3E 20            [ 7] 1118 	ld	a,#0b00100000		; Will set N F
+      000583 CD B9 05         [17] 1119 	call	lcd_out
+                                   1120 	;RS R/W DB3 DB2 DB1 DB0
+                                   1121 	;0   0   N   F   x   x  N=1 F=1
+      000586 3E C0            [ 7] 1122 	ld	a,#0b11000000
+      000588 CD B9 05         [17] 1123 	call	lcd_out
+                                   1124 
+      00058B CD C8 05         [17] 1125 	call	delay_5ms
+                                   1126 
+                                   1127 	;RS R/W DB7 DB6 DB5 DB4
+                                   1128 	;0   0   0   0   0   0
+      00058E 3E 00            [ 7] 1129 	ld	a,#0b00000000		; Will turn display on
+      000590 CD B9 05         [17] 1130 	call	lcd_out
+                                   1131 	;RS R/W DB3 DB2 DB1 DB0
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 23.
+Hexadecimal [24-Bits]
+
+
+
+                                   1132 	;0   0   1   1   0   0
+      000593 3E C0            [ 7] 1133 	ld	a,#0b11000000
+      000595 CD B9 05         [17] 1134 	call	lcd_out
+                                   1135 
+      000598 CD C8 05         [17] 1136 	call	delay_5ms
+                                   1137 
+                                   1138 	;RS R/W DB7 DB6 DB5 DB4
+                                   1139 	;0   0   0   0   0   0
+      00059B 3E 00            [ 7] 1140 	ld	a,#0b00000000		; Will clear display
+      00059D CD B9 05         [17] 1141 	call	lcd_out
+                                   1142 	;RS R/W DB3 DB2 DB1 DB0
+                                   1143 	;0   0   0   0   0   1
+      0005A0 3E 10            [ 7] 1144 	ld	a,#0b00010000
+      0005A2 CD B9 05         [17] 1145 	call	lcd_out
+                                   1146 
+      0005A5 CD C8 05         [17] 1147 	call	delay_5ms
+                                   1148 
+                                   1149 	;RS R/W DB7 DB6 DB5 DB4
+                                   1150 	;0   0   0   0   0   0
+      0005A8 3E 00            [ 7] 1151 	ld	a,#0b00000000		; Will set Increment mode
+      0005AA CD B9 05         [17] 1152 	call	lcd_out		; No shift
+                                   1153 	;RS R/W DB3 DB2 DB1 DB0
+                                   1154 	;0   0   0   1   1   0
+      0005AD 3E 60            [ 7] 1155 	ld	a,#0b01100000
+      0005AF CD B9 05         [17] 1156 	call	lcd_out
+                                   1157 
+      0005B2 CD C8 05         [17] 1158 	call	delay_5ms
+                                   1159 
+      0005B5 CD 2F 05         [17] 1160 	call	lcd_home
+      0005B8 C9               [10] 1161 	ret
+                                   1162 
+                                   1163 ;///////////////////////////////////////////////////////////////////////////////
+      0005B9                       1164 lcd_out:
+      0005B9 D3 10            [11] 1165 	out	(PORTDISP),a
+      0005BB 00               [ 4] 1166 	nop
+      0005BC 00               [ 4] 1167 	nop
+      0005BD CB CF            [ 8] 1168 	set	1,a
+      0005BF D3 10            [11] 1169 	out	(PORTDISP),a
+      0005C1 00               [ 4] 1170 	nop
+      0005C2 00               [ 4] 1171 	nop
+      0005C3 CB 8F            [ 8] 1172 	res	1,a
+      0005C5 D3 10            [11] 1173 	out	(PORTDISP),a
+      0005C7 C9               [10] 1174 	ret
+                                   1175 
+                                   1176 ;///////////////////////////////////////////////////////////////////////////////
+      0005C8                       1177 delay_5ms:
+      0005C8 01 00 03         [10] 1178 	ld	bc,#768		; 2.5us
+      0005CB                       1179 delay_5ms_a:	
+      0005CB 0B               [ 6] 1180 	dec	bc		; 1.5 us
+      0005CC 78               [ 4] 1181 	ld	a,b		; 1 us
+      0005CD B1               [ 4] 1182 	or	c		; 1 us
+      0005CE 20 FB            [12] 1183 	jr	nz,delay_5ms_a	; 3 us
+      0005D0 C9               [10] 1184 	ret			; 2.5 us
+                                   1185 
+                                   1186 ;///////////////////////////////////////////////////////////////////////////////
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 24.
+Hexadecimal [24-Bits]
+
+
+
+      0005D1                       1187 delay_15ms:	
+      0005D1 01 03 09         [10] 1188 	ld	bc,#2307	; 2.5us
+      0005D4                       1189 delay_15ms_a:	
+      0005D4 0B               [ 6] 1190 	dec	bc		; 1.5 us
+      0005D5 78               [ 4] 1191 	ld	a,b		; 1 us
+      0005D6 B1               [ 4] 1192 	or	c		; 1 us
+      0005D7 20 FB            [12] 1193 	jr	nz,delay_15ms_a	; 3 us
+      0005D9 C9               [10] 1194 	ret			; 2.5 us
+                                   1195 
+                                   1196 	;///////////////////////////////////////////////////////////////////////
+                                   1197 	;///////////////////////////// END OF CODE  ////////////////////////////
+                                   1198 	;///////////////////////////////////////////////////////////////////////
+                                   1199 
+      0005DA                       1200 gsinit:
+      0005DA 01 00 00         [10] 1201 	ld	bc, #l__INITIALIZER
+      0005DD 78               [ 4] 1202 	ld	a, b
+      0005DE B1               [ 4] 1203 	or	a, c
+      0005DF 28 08            [12] 1204 	jr	Z, gsinit_next
+      0005E1 11 00 00         [10] 1205 	ld	de, #s__INITIALIZED
+      0005E4 21 00 00         [10] 1206 	ld	hl, #s__INITIALIZER
+      0005E7 ED B0            [21] 1207 	ldir
+      0005E9                       1208 gsinit_next:
+      0005E9 C9               [10] 1209         ret
+                                   1210 
+                                   1211 	;; Ordering of segments for the linker.
+                                   1212 	.area	_HOME
+                                   1213 	.area	_CODE
+                                   1214 	.area	_INITIALIZER
+                                   1215 	.area   _GSINIT
+                                   1216 	.area   _GSFINAL
+                                   1217         .area   _MAIN
+                                   1218 	.area	_DATA
+                                   1219 	.area	_INITIALIZED
+                                   1220 	.area	_BSEG
+                                   1221 	.area   _BSS
+                                   1222 	.area   _HEAP
+                                   1223 
+                                   1224 	;.area   _CODE
+                                   1225 
+                                   1226 	;.area   _GSFINAL
+                                   1227 

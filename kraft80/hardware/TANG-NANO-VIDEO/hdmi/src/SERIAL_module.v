@@ -100,7 +100,7 @@ module SERIAL_module(
             end
         end
 
-        if (bauddivrx < (receiving ? 207 : 40) )    // Divider is 208 for 19200 BPS @ 4MHz
+        if (bauddivrx < (receiving ? 207 : 30) )    // Divider is 208 for 19200 BPS @ 4MHz
             bauddivrx = bauddivrx + 1;
         else begin
             bauddivrx = 0;

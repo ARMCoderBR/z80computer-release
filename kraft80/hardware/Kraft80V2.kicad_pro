@@ -37,9 +37,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 3.2,
-          "height": 5.6,
-          "width": 5.6
+          "drill": 2.5,
+          "height": 1.8,
+          "width": 3.6
         },
         "silk_line_width": 0.1,
         "silk_text_italic": false,
@@ -189,7 +189,8 @@
       "track_widths": [
         0.0,
         0.5,
-        1.0
+        1.0,
+        1.5
       ],
       "tuning_pattern_settings": {
         "diff_pair_defaults": {
@@ -636,6 +637,10 @@
     [
       "2f03a0d0-ba47-4be6-9655-f1ed9832c9ae",
       "kraft80V2-fpga"
+    ],
+    [
+      "9c5122a8-fe88-4184-85f2-57914ed9ba7e",
+      "kraft80V2-extras"
     ]
   ],
   "text_variables": {}

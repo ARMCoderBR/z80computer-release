@@ -1,0 +1,583 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 4.2.0 #13081 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module io_kraft80
+                                      6 	.optsdcc -mz80
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _lcd_beg2
+                                     12 	.globl _lcd_clear
+                                     13 	.globl _lcd_cmd
+                                     14 	.globl _send_nibble
+                                     15 	.globl _dx100ms
+                                     16 	.globl _dx1ms
+                                     17 	.globl _d1ms
+                                     18 	.globl _dispcol
+                                     19 	.globl _lgets_noecho
+                                     20 	.globl _lgets
+                                     21 	.globl _putstr
+                                     22 	.globl _putchar_lcd
+                                     23 	.globl _putstr_lcd
+                                     24 	.globl _getchar
+                                     25 	.globl _putchar
+                                     26 	.globl _setleds
+                                     27 	.globl _readbuttons
+                                     28 	.globl _d100ms
+                                     29 	.globl _lcd_home
+                                     30 	.globl _lcd_home2
+                                     31 	.globl _lcd_begin
+                                     32 ;--------------------------------------------------------
+                                     33 ; special function registers
+                                     34 ;--------------------------------------------------------
+                                     35 ;--------------------------------------------------------
+                                     36 ; ram data
+                                     37 ;--------------------------------------------------------
+                                     38 	.area _DATA
+                                     39 ;--------------------------------------------------------
+                                     40 ; ram data
+                                     41 ;--------------------------------------------------------
+                                     42 	.area _INITIALIZED
+      000000                         43 _dispcol::
+      000000                         44 	.ds 1
+                                     45 ;--------------------------------------------------------
+                                     46 ; absolute external ram data
+                                     47 ;--------------------------------------------------------
+                                     48 	.area _DABS (ABS)
+                                     49 ;--------------------------------------------------------
+                                     50 ; global & static initialisations
+                                     51 ;--------------------------------------------------------
+                                     52 	.area _HOME
+                                     53 	.area _GSINIT
+                                     54 	.area _GSFINAL
+                                     55 	.area _GSINIT
+                                     56 ;--------------------------------------------------------
+                                     57 ; Home
+                                     58 ;--------------------------------------------------------
+                                     59 	.area _HOME
+                                     60 	.area _HOME
+                                     61 ;--------------------------------------------------------
+                                     62 ; code
+                                     63 ;--------------------------------------------------------
+                                     64 	.area _CODE
+                                     65 ;io-kraft80.c:14: char *lgets_noecho(char *buf, int bufsize){
+                                     66 ;	---------------------------------
+                                     67 ; Function lgets_noecho
+                                     68 ; ---------------------------------
+      000000                         69 _lgets_noecho::
+      000000 DD E5            [15]   70 	push	ix
+      000002 DD 21 00 00      [14]   71 	ld	ix,#0
+      000006 DD 39            [15]   72 	add	ix,sp
+      000008 FD 21 F8 FF      [14]   73 	ld	iy, #-8
+      00000C FD 39            [15]   74 	add	iy, sp
+      00000E FD F9            [10]   75 	ld	sp, iy
+      000010 DD 75 FC         [19]   76 	ld	-4 (ix), l
+      000013 DD 74 FD         [19]   77 	ld	-3 (ix), h
+                                     78 ;io-kraft80.c:16: int i = 0;
+      000016 AF               [ 4]   79 	xor	a, a
+      000017 DD 77 FE         [19]   80 	ld	-2 (ix), a
+      00001A DD 77 FF         [19]   81 	ld	-1 (ix), a
+      00001D 7B               [ 4]   82 	ld	a, e
+      00001E C6 FF            [ 7]   83 	add	a, #0xff
+      000020 DD 77 F8         [19]   84 	ld	-8 (ix), a
+      000023 7A               [ 4]   85 	ld	a, d
+      000024 CE FF            [ 7]   86 	adc	a, #0xff
+      000026 DD 77 F9         [19]   87 	ld	-7 (ix), a
+      000029                         88 00111$:
+                                     89 ;io-kraft80.c:20: a = getchar();
+      000029 CDr68r01         [17]   90 	call	_getchar
+      00002C DD 73 FA         [19]   91 	ld	-6 (ix), e
+      00002F DD 72 FB         [19]   92 	ld	-5 (ix), d
+      000032 DD 7E FA         [19]   93 	ld	a, -6 (ix)
+      000035 DD 77 FB         [19]   94 	ld	-5 (ix), a
+                                     95 ;io-kraft80.c:23: buf[i] = 0;
+      000038 DD 7E FE         [19]   96 	ld	a, -2 (ix)
+      00003B DD 86 FC         [19]   97 	add	a, -4 (ix)
+      00003E 4F               [ 4]   98 	ld	c, a
+      00003F DD 7E FF         [19]   99 	ld	a, -1 (ix)
+      000042 DD 8E FD         [19]  100 	adc	a, -3 (ix)
+      000045 47               [ 4]  101 	ld	b, a
+                                    102 ;io-kraft80.c:22: if (a == 0x0d){
+      000046 DD 7E FB         [19]  103 	ld	a, -5 (ix)
+      000049 D6 0D            [ 7]  104 	sub	a, #0x0d
+      00004B 20 0A            [12]  105 	jr	NZ, 00102$
+                                    106 ;io-kraft80.c:23: buf[i] = 0;
+      00004D AF               [ 4]  107 	xor	a, a
+      00004E 02               [ 7]  108 	ld	(bc), a
+                                    109 ;io-kraft80.c:24: return buf;
+      00004F DD 5E FC         [19]  110 	ld	e, -4 (ix)
+      000052 DD 56 FD         [19]  111 	ld	d, -3 (ix)
+      000055 18 40            [12]  112 	jr	00112$
+      000057                        113 00102$:
+                                    114 ;io-kraft80.c:27: if (a == 0x08){
+      000057 DD 7E FB         [19]  115 	ld	a, -5 (ix)
+      00005A D6 08            [ 7]  116 	sub	a, #0x08
+      00005C 20 17            [12]  117 	jr	NZ, 00106$
+                                    118 ;io-kraft80.c:28: if (i) --i;
+      00005E DD 7E FF         [19]  119 	ld	a, -1 (ix)
+      000061 DD B6 FE         [19]  120 	or	a, -2 (ix)
+      000064 28 C3            [12]  121 	jr	Z, 00111$
+      000066 DD 6E FE         [19]  122 	ld	l, -2 (ix)
+      000069 DD 66 FF         [19]  123 	ld	h, -1 (ix)
+      00006C 2B               [ 6]  124 	dec	hl
+      00006D DD 75 FE         [19]  125 	ld	-2 (ix), l
+      000070 DD 74 FF         [19]  126 	ld	-1 (ix), h
+                                    127 ;io-kraft80.c:29: continue;
+      000073 18 B4            [12]  128 	jr	00111$
+      000075                        129 00106$:
+                                    130 ;io-kraft80.c:33: buf[i] = a;
+      000075 DD 7E FB         [19]  131 	ld	a, -5 (ix)
+      000078 02               [ 7]  132 	ld	(bc), a
+                                    133 ;io-kraft80.c:34: if (i < (bufsize-1))
+      000079 DD 7E FE         [19]  134 	ld	a, -2 (ix)
+      00007C DD 96 F8         [19]  135 	sub	a, -8 (ix)
+      00007F DD 7E FF         [19]  136 	ld	a, -1 (ix)
+      000082 DD 9E F9         [19]  137 	sbc	a, -7 (ix)
+      000085 E2r8Ar00         [10]  138 	jp	PO, 00143$
+      000088 EE 80            [ 7]  139 	xor	a, #0x80
+      00008A                        140 00143$:
+      00008A F2r29r00         [10]  141 	jp	P, 00111$
+                                    142 ;io-kraft80.c:35: ++i;
+      00008D DD 34 FE         [23]  143 	inc	-2 (ix)
+      000090 20 97            [12]  144 	jr	NZ, 00111$
+      000092 DD 34 FF         [23]  145 	inc	-1 (ix)
+      000095 18 92            [12]  146 	jr	00111$
+      000097                        147 00112$:
+                                    148 ;io-kraft80.c:38: }
+      000097 DD F9            [10]  149 	ld	sp, ix
+      000099 DD E1            [14]  150 	pop	ix
+      00009B C9               [10]  151 	ret
+                                    152 ;io-kraft80.c:41: char *lgets(char *buf, int bufsize){
+                                    153 ;	---------------------------------
+                                    154 ; Function lgets
+                                    155 ; ---------------------------------
+      00009C                        156 _lgets::
+      00009C DD E5            [15]  157 	push	ix
+      00009E DD 21 00 00      [14]  158 	ld	ix,#0
+      0000A2 DD 39            [15]  159 	add	ix,sp
+      0000A4 FD 21 F7 FF      [14]  160 	ld	iy, #-9
+      0000A8 FD 39            [15]  161 	add	iy, sp
+      0000AA FD F9            [10]  162 	ld	sp, iy
+      0000AC DD 75 FC         [19]  163 	ld	-4 (ix), l
+      0000AF DD 74 FD         [19]  164 	ld	-3 (ix), h
+                                    165 ;io-kraft80.c:43: int i = 0;
+      0000B2 AF               [ 4]  166 	xor	a, a
+      0000B3 DD 77 FE         [19]  167 	ld	-2 (ix), a
+      0000B6 DD 77 FF         [19]  168 	ld	-1 (ix), a
+      0000B9 7B               [ 4]  169 	ld	a, e
+      0000BA C6 FF            [ 7]  170 	add	a, #0xff
+      0000BC DD 77 F7         [19]  171 	ld	-9 (ix), a
+      0000BF 7A               [ 4]  172 	ld	a, d
+      0000C0 CE FF            [ 7]  173 	adc	a, #0xff
+      0000C2 DD 77 F8         [19]  174 	ld	-8 (ix), a
+      0000C5                        175 00111$:
+                                    176 ;io-kraft80.c:47: a = getchar();
+      0000C5 CDr68r01         [17]  177 	call	_getchar
+      0000C8 DD 73 FA         [19]  178 	ld	-6 (ix), e
+      0000CB DD 72 FB         [19]  179 	ld	-5 (ix), d
+      0000CE DD 7E FA         [19]  180 	ld	a, -6 (ix)
+                                    181 ;io-kraft80.c:48: putchar(a);
+      0000D1 DD 77 F9         [19]  182 	ld	-7 (ix), a
+                                    183 ;	spillPairReg hl
+                                    184 ;	spillPairReg hl
+      0000D4 DD 77 FA         [19]  185 	ld	-6 (ix), a
+      0000D7 DD 36 FB 00      [19]  186 	ld	-5 (ix), #0x00
+      0000DB 6F               [ 4]  187 	ld	l, a
+      0000DC 26 00            [ 7]  188 	ld	h, #0x00
+                                    189 ;	spillPairReg hl
+                                    190 ;	spillPairReg hl
+      0000DE CDr6Fr01         [17]  191 	call	_putchar
+                                    192 ;io-kraft80.c:50: buf[i] = 0;
+      0000E1 DD 7E FE         [19]  193 	ld	a, -2 (ix)
+      0000E4 DD 86 FC         [19]  194 	add	a, -4 (ix)
+      0000E7 4F               [ 4]  195 	ld	c, a
+      0000E8 DD 7E FF         [19]  196 	ld	a, -1 (ix)
+      0000EB DD 8E FD         [19]  197 	adc	a, -3 (ix)
+      0000EE 47               [ 4]  198 	ld	b, a
+                                    199 ;io-kraft80.c:49: if (a == 0x0d){
+      0000EF DD 7E F9         [19]  200 	ld	a, -7 (ix)
+      0000F2 D6 0D            [ 7]  201 	sub	a, #0x0d
+      0000F4 20 0A            [12]  202 	jr	NZ, 00102$
+                                    203 ;io-kraft80.c:50: buf[i] = 0;
+      0000F6 AF               [ 4]  204 	xor	a, a
+      0000F7 02               [ 7]  205 	ld	(bc), a
+                                    206 ;io-kraft80.c:51: return buf;
+      0000F8 DD 5E FC         [19]  207 	ld	e, -4 (ix)
+      0000FB DD 56 FD         [19]  208 	ld	d, -3 (ix)
+      0000FE 18 40            [12]  209 	jr	00112$
+      000100                        210 00102$:
+                                    211 ;io-kraft80.c:53: if (a == 0x08){
+      000100 DD 7E F9         [19]  212 	ld	a, -7 (ix)
+      000103 D6 08            [ 7]  213 	sub	a, #0x08
+      000105 20 17            [12]  214 	jr	NZ, 00106$
+                                    215 ;io-kraft80.c:54: if (i) --i;
+      000107 DD 7E FF         [19]  216 	ld	a, -1 (ix)
+      00010A DD B6 FE         [19]  217 	or	a, -2 (ix)
+      00010D 28 B6            [12]  218 	jr	Z, 00111$
+      00010F DD 6E FE         [19]  219 	ld	l, -2 (ix)
+      000112 DD 66 FF         [19]  220 	ld	h, -1 (ix)
+      000115 2B               [ 6]  221 	dec	hl
+      000116 DD 75 FE         [19]  222 	ld	-2 (ix), l
+      000119 DD 74 FF         [19]  223 	ld	-1 (ix), h
+                                    224 ;io-kraft80.c:55: continue;
+      00011C 18 A7            [12]  225 	jr	00111$
+      00011E                        226 00106$:
+                                    227 ;io-kraft80.c:57: buf[i] = a;
+      00011E DD 7E F9         [19]  228 	ld	a, -7 (ix)
+      000121 02               [ 7]  229 	ld	(bc), a
+                                    230 ;io-kraft80.c:58: if (i < (bufsize-1))
+      000122 DD 7E FE         [19]  231 	ld	a, -2 (ix)
+      000125 DD 96 F7         [19]  232 	sub	a, -9 (ix)
+      000128 DD 7E FF         [19]  233 	ld	a, -1 (ix)
+      00012B DD 9E F8         [19]  234 	sbc	a, -8 (ix)
+      00012E E2r33r01         [10]  235 	jp	PO, 00143$
+      000131 EE 80            [ 7]  236 	xor	a, #0x80
+      000133                        237 00143$:
+      000133 F2rC5r00         [10]  238 	jp	P, 00111$
+                                    239 ;io-kraft80.c:59: ++i;
+      000136 DD 34 FE         [23]  240 	inc	-2 (ix)
+      000139 20 8A            [12]  241 	jr	NZ, 00111$
+      00013B DD 34 FF         [23]  242 	inc	-1 (ix)
+      00013E 18 85            [12]  243 	jr	00111$
+      000140                        244 00112$:
+                                    245 ;io-kraft80.c:61: }
+      000140 DD F9            [10]  246 	ld	sp, ix
+      000142 DD E1            [14]  247 	pop	ix
+      000144 C9               [10]  248 	ret
+                                    249 ;io-kraft80.c:64: void putstr(char *s){
+                                    250 ;	---------------------------------
+                                    251 ; Function putstr
+                                    252 ; ---------------------------------
+      000145                        253 _putstr::
+      000145 EB               [ 4]  254 	ex	de, hl
+                                    255 ;io-kraft80.c:66: while(*s){
+      000146                        256 00101$:
+      000146 1A               [ 7]  257 	ld	a, (de)
+      000147 B7               [ 4]  258 	or	a, a
+      000148 C8               [11]  259 	ret	Z
+                                    260 ;io-kraft80.c:67: putchar(*(s++));
+      000149 13               [ 6]  261 	inc	de
+      00014A 6F               [ 4]  262 	ld	l, a
+                                    263 ;	spillPairReg hl
+                                    264 ;	spillPairReg hl
+      00014B 26 00            [ 7]  265 	ld	h, #0x00
+                                    266 ;	spillPairReg hl
+                                    267 ;	spillPairReg hl
+      00014D D5               [11]  268 	push	de
+      00014E CDr6Fr01         [17]  269 	call	_putchar
+      000151 D1               [10]  270 	pop	de
+                                    271 ;io-kraft80.c:69: }
+      000152 18 F2            [12]  272 	jr	00101$
+                                    273 ;io-kraft80.c:72: int putchar_lcd (char a) __naked{
+                                    274 ;	---------------------------------
+                                    275 ; Function putchar_lcd
+                                    276 ; ---------------------------------
+      000154                        277 _putchar_lcd::
+                                    278 ;io-kraft80.c:80: __endasm;
+      000154 47               [ 4]  279 	ld	b,a
+      000155 CDrE0r01         [17]  280 	call	lcd_write
+      000158 2E 00            [ 7]  281 	ld	l,#0
+      00015A C9               [10]  282 	ret
+                                    283 ;io-kraft80.c:81: }
+                                    284 ;io-kraft80.c:84: void putstr_lcd(char *s){
+                                    285 ;	---------------------------------
+                                    286 ; Function putstr_lcd
+                                    287 ; ---------------------------------
+      00015B                        288 _putstr_lcd::
+                                    289 ;io-kraft80.c:86: while(*s){
+      00015B                        290 00101$:
+      00015B 7E               [ 7]  291 	ld	a, (hl)
+      00015C B7               [ 4]  292 	or	a, a
+      00015D C8               [11]  293 	ret	Z
+                                    294 ;io-kraft80.c:87: putchar_lcd(*(s++));
+      00015E 23               [ 6]  295 	inc	hl
+      00015F 4F               [ 4]  296 	ld	c, a
+      000160 E5               [11]  297 	push	hl
+      000161 79               [ 4]  298 	ld	a, c
+      000162 CDr54r01         [17]  299 	call	_putchar_lcd
+      000165 E1               [10]  300 	pop	hl
+                                    301 ;io-kraft80.c:89: }
+      000166 18 F3            [12]  302 	jr	00101$
+                                    303 ;io-kraft80.c:93: int getchar() __naked{
+                                    304 ;	---------------------------------
+                                    305 ; Function getchar
+                                    306 ; ---------------------------------
+      000168                        307 _getchar::
+                                    308 ;io-kraft80.c:103: __endasm;
+      000168 D7               [11]  309 	rst	#0x10
+      000169 28 FD            [12]  310 	jr	z,_getchar
+      00016B 5F               [ 4]  311 	ld	e,a
+      00016C 16 00            [ 7]  312 	ld	d,#0
+      00016E C9               [10]  313 	ret
+                                    314 ;io-kraft80.c:104: }
+                                    315 ;io-kraft80.c:108: int putchar (int a) __naked{
+                                    316 ;	---------------------------------
+                                    317 ; Function putchar
+                                    318 ; ---------------------------------
+      00016F                        319 _putchar::
+                                    320 ;io-kraft80.c:117: __endasm;
+      00016F 7D               [ 4]  321 	ld	a,l
+      000170 CF               [11]  322 	rst	#0x08
+      000171 2E 00            [ 7]  323 	ld	l,#0
+      000173 C9               [10]  324 	ret
+                                    325 ;io-kraft80.c:118: }
+                                    326 ;io-kraft80.c:121: void setleds(char leds) __naked{
+                                    327 ;	---------------------------------
+                                    328 ; Function setleds
+                                    329 ; ---------------------------------
+      000174                        330 _setleds::
+                                    331 ;io-kraft80.c:130: __endasm;
+                           000000   332 	PORTA	.equ 0x00
+      000174 D3 00            [11]  333 	out(PORTA),a
+      000176 C9               [10]  334 	ret
+                                    335 ;io-kraft80.c:131: }
+                                    336 ;io-kraft80.c:134: unsigned char readbuttons() __naked{
+                                    337 ;	---------------------------------
+                                    338 ; Function readbuttons
+                                    339 ; ---------------------------------
+      000177                        340 _readbuttons::
+                                    341 ;io-kraft80.c:143: __endasm;
+                           000000   342 	PORTX	.equ 0x00
+      000177 DB 00            [11]  343 	in	a,(PORTX)
+      000179 6F               [ 4]  344 	ld	l,a
+      00017A C9               [10]  345 	ret
+                                    346 ;io-kraft80.c:144: }
+                                    347 ;io-kraft80.c:147: void d1ms() __naked{
+                                    348 ;	---------------------------------
+                                    349 ; Function d1ms
+                                    350 ; ---------------------------------
+      00017B                        351 _d1ms::
+                                    352 ;io-kraft80.c:161: __endasm;
+                                    353 ;d1ms:	; 4.25µs 17 T States (call)
+      00017B C5               [11]  354 	push	bc ; 2.75µs 11 T States
+      00017C 06 DB            [ 7]  355 	ld	b,#0xDB ; 1.75 µs 7 T States
+      00017E                        356 	dloop:
+      00017E 05               [ 4]  357 	dec	b ; 1.0µs 4 T States
+      00017F 00               [ 4]  358 	nop	; 1.0µs 4 T States
+      000180 C2r7Er01         [10]  359 	jp	nz,dloop ; 2.5µs 10 T States
+      000183 C1               [10]  360 	pop	bc ; 2.5µs 10 T States
+      000184 C9               [10]  361 	ret	; 2.5µs 10 T States
+                                    362 ;io-kraft80.c:162: }
+                                    363 ;io-kraft80.c:165: void dx1ms() __naked{
+                                    364 ;	---------------------------------
+                                    365 ; Function dx1ms
+                                    366 ; ---------------------------------
+      000185                        367 _dx1ms::
+                                    368 ;io-kraft80.c:174: __endasm;
+      000185 CDr7Br01         [17]  369 	call	_d1ms ; 1ms (delay time)
+      000188 15               [ 4]  370 	dec	d ; 1.0µs 4 T States
+      000189 C2r85r01         [10]  371 	jp	nz,_dx1ms ; 2.5µs 10 T States
+      00018C C9               [10]  372 	ret	; 2.5µs 10 T States
+                                    373 ;io-kraft80.c:175: }
+                                    374 ;io-kraft80.c:179: void d100ms() __naked{
+                                    375 ;	---------------------------------
+                                    376 ; Function d100ms
+                                    377 ; ---------------------------------
+      00018D                        378 _d100ms::
+                                    379 ;io-kraft80.c:196: __endasm;
+                                    380 ;d100ms:	; 4.25µs 17 T States
+      00018D C5               [11]  381 	push	bc ; 2.75µs 11 T States
+      00018E 06 97            [ 7]  382 	ld	b,#0x97 ; 1.75µs 7 T States
+      000190                        383 	aux1:
+      000190 0E BD            [ 7]  384 	ld	c,#0xBD ; 1.75µs 7 T States
+      000192                        385 	aux2:
+      000192 0D               [ 4]  386 	dec	c ; 1.0µs 4 T States
+      000193 C2r92r01         [10]  387 	jp	nz,aux2 ; 2.5µs 10 T States
+      000196 05               [ 4]  388 	dec	b ; 1.0µs 4 T States
+      000197 C2r90r01         [10]  389 	jp	nz,aux1 ; 2.5µs 10 T States
+      00019A C1               [10]  390 	pop	bc ; 2.5µs 10 T States
+      00019B C9               [10]  391 	ret	; 2.5µs 10 T States
+                                    392 ;io-kraft80.c:197: }
+                                    393 ;io-kraft80.c:200: void dx100ms() __naked{
+                                    394 ;	---------------------------------
+                                    395 ; Function dx100ms
+                                    396 ; ---------------------------------
+      00019C                        397 _dx100ms::
+                                    398 ;io-kraft80.c:210: __endasm;
+                                    399 ;dx100ms:
+      00019C CDr8Dr01         [17]  400 	call	_d100ms ; 1ms (delay time)
+      00019F 15               [ 4]  401 	dec	d ; 1.0µs 4 T States
+      0001A0 C2r9Cr01         [10]  402 	jp	nz,_dx100ms ; 2.5µs 10 T States
+      0001A3 C9               [10]  403 	ret	; 2.5µs 10 T States
+                                    404 ;io-kraft80.c:211: }
+                                    405 ;io-kraft80.c:214: void send_nibble() __naked{
+                                    406 ;	---------------------------------
+                                    407 ; Function send_nibble
+                                    408 ; ---------------------------------
+      0001A4                        409 _send_nibble::
+                                    410 ;io-kraft80.c:254: __endasm;
+                           000001   411 	RS	.equ 0x01
+                           000001   412 	EN	.equ 0x01
+                           000010   413 	PORTB	.equ 0x10
+                                    414 ;send_nibble:
+      0001A4 3E 00            [ 7]  415 	ld	a,#0x00 ;zera conteúdo de ACC
+      0001A6 CB 41            [ 8]  416 	bit	0,c ;bit 0 de c em LOW?
+      0001A8 CArADr01         [10]  417 	jp	z,rs_clr ;sim, desvia para manter RS limpo
+      0001AB 3E 01            [ 7]  418 	ld	a,#0x00|RS ;não, seta bit RS
+      0001AD                        419 	rs_clr:
+      0001AD CB 78            [ 8]  420 	bit	7,b ;bit7 de B em LOW?
+      0001AF CArB4r01         [10]  421 	jp	z,b6aval ;sim, desvia para avaliar bit6
+      0001B2 CB FF            [ 8]  422 	set	7,a ;não, seta bit 7 de acc
+      0001B4                        423 	b6aval:
+      0001B4 CB 70            [ 8]  424 	bit	6,b ;bit6 de B em LOW?
+      0001B6 CArBBr01         [10]  425 	jp	z,b5aval ;sim, desvia para avaliar bit5
+      0001B9 CB F7            [ 8]  426 	set	6,a ;não, seta bit 6 de acc
+      0001BB                        427 	b5aval:
+      0001BB CB 68            [ 8]  428 	bit	5,b ;bit5 de B em LOW?
+      0001BD CArC2r01         [10]  429 	jp	z,b4aval ;sim, desvia para avaliar bit4
+      0001C0 CB EF            [ 8]  430 	set	5,a ;não, seta bit 5 de acc
+      0001C2                        431 	b4aval:
+      0001C2 CB 60            [ 8]  432 	bit	4,b ;bit4 de B em LOW?
+      0001C4 CArC9r01         [10]  433 	jp	z,lcd_en ;sim, desvia para pulso de enable
+      0001C7 CB E7            [ 8]  434 	set	4,a ;não, set bit 4 de acc
+      0001C9                        435 	lcd_en:
+      0001C9 CB CF            [ 8]  436 	set	EN,a ;pino enable em HIGH
+      0001CB D3 10            [11]  437 	out	(PORTB),a ;escreve no PORTB
+      0001CD 16 02            [ 7]  438 	ld	d,#2 ;carrega 2d em d
+      0001CF CDr85r01         [17]  439 	call	_dx1ms ;aguarda 2ms
+      0001D2 CB 8F            [ 8]  440 	res	EN,a ;pino enable em LOW
+      0001D4 D3 10            [11]  441 	out	(PORTB),a ;escreve no PORTB
+      0001D6 16 02            [ 7]  442 	ld	d,#2 ;carrega 2d em d
+      0001D8 CDr85r01         [17]  443 	call	_dx1ms ;aguarda 2ms
+      0001DB C9               [10]  444 	ret	;retorno da sub-rotina
+                                    445 ;io-kraft80.c:255: }
+                                    446 ;io-kraft80.c:258: void lcd_cmd() __naked{
+                                    447 ;	---------------------------------
+                                    448 ; Function lcd_cmd
+                                    449 ; ---------------------------------
+      0001DC                        450 _lcd_cmd::
+                                    451 ;io-kraft80.c:293: __endasm;
+                                    452 ;lcd_cmd:
+      0001DC 0E 00            [ 7]  453 	ld	c,#0x00
+      0001DE 18 1C            [12]  454 	jr	send_byte
+      0001E0                        455 	lcd_write:
+      0001E0 3Ar00r00         [13]  456 	ld	a,(_dispcol)
+      0001E3 FE 10            [ 7]  457 	cp	#16
+      0001E5 20 05            [12]  458 	jr	nz,lcd_w1
+      0001E7 CDr19r02         [17]  459 	call	_lcd_home2
+      0001EA 18 07            [12]  460 	jr	lcd_w2
+      0001EC                        461 	lcd_w1:
+      0001EC FE 20            [ 7]  462 	cp	#32
+      0001EE 20 03            [12]  463 	jr	nz,lcd_w2
+      0001F0 CDr0Br02         [17]  464 	call	_lcd_home
+      0001F3                        465 	lcd_w2:
+      0001F3 3Ar00r00         [13]  466 	ld	a,(_dispcol)
+      0001F6 3C               [ 4]  467 	inc	a
+      0001F7 32r00r00         [13]  468 	ld	(_dispcol),a
+      0001FA 0E 01            [ 7]  469 	ld	c,#0x01 ;01h para envio de caracteres
+      0001FC                        470 	send_byte:
+      0001FC CDrA4r01         [17]  471 	call	_send_nibble ;envia nibble mais significativo
+      0001FF 78               [ 4]  472 	ld	a,b ;carrega conteúdo de b em acc
+      000200 17               [ 4]  473 	rla	;rotaciona acc para esquerda 4x
+      000201 17               [ 4]  474 	rla	;
+      000202 17               [ 4]  475 	rla	;
+      000203 17               [ 4]  476 	rla	;
+      000204 E6 F0            [ 7]  477 	and	#0xF0 ;máscara para preservar nibble mais significativo
+      000206 47               [ 4]  478 	ld	b,a ;atualiza b
+      000207 CDrA4r01         [17]  479 	call	_send_nibble ;envia nibble menos significativo
+      00020A C9               [10]  480 	ret	;retorno da sub-rotina
+                                    481 ;io-kraft80.c:294: }
+                                    482 ;io-kraft80.c:297: void lcd_home() __naked{
+                                    483 ;	---------------------------------
+                                    484 ; Function lcd_home
+                                    485 ; ---------------------------------
+      00020B                        486 _lcd_home::
+                                    487 ;io-kraft80.c:312: __endasm;
+                                    488 ;lcd_home:
+      00020B C5               [11]  489 	push	bc
+      00020C 06 02            [ 7]  490 	ld	b,#0x02 ;return home
+      00020E CDrDCr01         [17]  491 	call	_lcd_cmd ;envia 02h para o LCD
+      000211 F5               [11]  492 	push	af
+      000212 AF               [ 4]  493 	xor	a
+      000213 32r00r00         [13]  494 	ld	(_dispcol),a
+      000216 F1               [10]  495 	pop	af
+      000217 C1               [10]  496 	pop	bc
+      000218 C9               [10]  497 	ret
+                                    498 ;io-kraft80.c:313: }
+                                    499 ;io-kraft80.c:316: void lcd_home2() __naked{
+                                    500 ;	---------------------------------
+                                    501 ; Function lcd_home2
+                                    502 ; ---------------------------------
+      000219                        503 _lcd_home2::
+                                    504 ;io-kraft80.c:331: __endasm;
+                                    505 ;lcd_home2:
+      000219 C5               [11]  506 	push	bc
+      00021A 06 C0            [ 7]  507 	ld	b,#0xC0 ;posiciona cursor na linha 1, coluna 0
+      00021C CDrDCr01         [17]  508 	call	_lcd_cmd ;envia comando
+      00021F F5               [11]  509 	push	af
+      000220 3E 10            [ 7]  510 	ld	a,#16
+      000222 32r00r00         [13]  511 	ld	(_dispcol),a
+      000225 F1               [10]  512 	pop	af
+      000226 C1               [10]  513 	pop	bc
+      000227 C9               [10]  514 	ret
+                                    515 ;io-kraft80.c:332: }
+                                    516 ;io-kraft80.c:335: void lcd_clear() __naked{
+                                    517 ;	---------------------------------
+                                    518 ; Function lcd_clear
+                                    519 ; ---------------------------------
+      000228                        520 _lcd_clear::
+                                    521 ;io-kraft80.c:349: __endasm;
+                                    522 ;lcd_clear:
+                                    523 ;ld	b,#0x02 ;return home
+                                    524 ;call	_lcd_cmd ;envia 02h para o LCD
+      000228 CDr0Br02         [17]  525 	call	_lcd_home
+      00022B 06 01            [ 7]  526 	ld	b,#0x01 ;limpa o display
+      00022D CDrDCr01         [17]  527 	call	_lcd_cmd ;envia 01h para o LCD
+      000230 AF               [ 4]  528 	xor	a
+      000231 32r00r00         [13]  529 	ld	(_dispcol),a
+      000234 C9               [10]  530 	ret	;retorno da sub-rotina
+                                    531 ;io-kraft80.c:350: }
+                                    532 ;io-kraft80.c:353: void lcd_beg2() __naked{
+                                    533 ;	---------------------------------
+                                    534 ; Function lcd_beg2
+                                    535 ; ---------------------------------
+      000235                        536 _lcd_beg2::
+                                    537 ;io-kraft80.c:363: __endasm;
+      000235 16 02            [ 7]  538 	ld	d,#2 ;carrega 2d em d
+      000237 CDr9Cr01         [17]  539 	call	_dx100ms ;aguarda 500ms
+      00023A 06 0C            [ 7]  540 	ld	b,#0x0C ;desliga cursor e blink
+      00023C CDrDCr01         [17]  541 	call	_lcd_cmd ;envia comando
+      00023F C9               [10]  542 	ret
+                                    543 ;io-kraft80.c:364: }
+                                    544 ;io-kraft80.c:367: void lcd_begin() __naked{
+                                    545 ;	---------------------------------
+                                    546 ; Function lcd_begin
+                                    547 ; ---------------------------------
+      000240                        548 _lcd_begin::
+                                    549 ;io-kraft80.c:400: __endasm;
+      000240 16 32            [ 7]  550 	ld	d,#50 ;carrega 50d em d
+      000242 CDr85r01         [17]  551 	call	_dx1ms ;tempo para estabilização (50ms)
+      000245 06 30            [ 7]  552 	ld	b,#0x30 ;protocolo de inicialização
+      000247 0E 00            [ 7]  553 	ld	c,#0x00 ;envio de comando
+      000249 CDrA4r01         [17]  554 	call	_send_nibble ;envia 30h para o LCD
+      00024C 16 05            [ 7]  555 	ld	d,#5 ;carrega 5d em d
+      00024E CDr85r01         [17]  556 	call	_dx1ms ;aguarda 5ms (tempo superior ao datasheet)
+      000251 06 30            [ 7]  557 	ld	b,#0x30 ;protocolo de inicialização
+      000253 0E 00            [ 7]  558 	ld	c,#0x00 ;envio de comando
+      000255 CDrA4r01         [17]  559 	call	_send_nibble ;envia 30h para o LCD
+      000258 CDr7Br01         [17]  560 	call	_d1ms ;aguarda 1ms (tempo superior ao datasheet)
+      00025B 06 30            [ 7]  561 	ld	b,#0x30 ;protocolo de inicialização
+      00025D 0E 00            [ 7]  562 	ld	c,#0x00 ;envio de comando
+      00025F CDrA4r01         [17]  563 	call	_send_nibble ;envia 30h para o LCD
+      000262 06 20            [ 7]  564 	ld	b,#0x20 ;LCD no modo 4 bits
+      000264 0E 00            [ 7]  565 	ld	c,#0x00 ;envio de comando
+      000266 CDrA4r01         [17]  566 	call	_send_nibble ;envia 30h para o LCD
+      000269 06 28            [ 7]  567 	ld	b,#0x28 ;5x8 pontos por caractere, duas linhas
+      00026B CDrDCr01         [17]  568 	call	_lcd_cmd ;envia comando 28h
+      00026E 06 0F            [ 7]  569 	ld	b,#0x0F ;liga display, cursor e blink
+      000270 CDrDCr01         [17]  570 	call	_lcd_cmd ;envia comando 0Fh
+      000273 06 01            [ 7]  571 	ld	b,#0x01 ;limpa LCD
+      000275 CDrDCr01         [17]  572 	call	_lcd_cmd ;envia comando 01h
+      000278 06 06            [ 7]  573 	ld	b,#0x06 ;modo de incremento de endereço para direita, movendo apenas o cursor
+      00027A CDrDCr01         [17]  574 	call	_lcd_cmd ;envia comando 06h
+      00027D CDr28r02         [17]  575 	call	_lcd_clear ;limpa o display
+      000280 CDr35r02         [17]  576 	call	_lcd_beg2
+      000283 C9               [10]  577 	ret	;retorno da sub-rotina
+                                    578 ;io-kraft80.c:401: }
+                                    579 	.area _CODE
+                                    580 	.area _INITIALIZER
+      000000                        581 __xinit__dispcol:
+      000000 00                     582 	.db #0x00	; 0
+                                    583 	.area _CABS (ABS)

@@ -1,0 +1,184 @@
+ASxxxx Linker V03.00 + NoICE + sdld,  page 1.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+.  .ABS.                            00000000    00000000 =           0. bytes (ABS,CON)
+
+      Value  Global                              Global Defined In Module
+      -----  --------------------------------   ------------------------
+     00000000  .__.ABS.                           
+     00000000  l_DATA                          
+     00000000  l_HEADER                        
+     00000000  l__BSEG                         
+     00000000  l__BSS                          
+     00000000  l__CABS                         
+     00000000  l__DABS                         
+     00000000  l__GSFINAL                      
+     00000000  l__GSINIT                       
+     00000000  l__HEAP                         
+     00000000  l__HOME                         
+     00000000  l__MAIN                         
+     00000000  s_HEADER                        
+     00000000  s_HEADER0                       
+     00000000  s__CABS                         
+     00000000  s__DABS                         
+     00000006  l__DATA                         
+     0000001C  l__INITIALIZED                  
+     0000001C  l__INITIALIZER                  
+     00000034  l_HEADER0                       
+     000007E0  l__CODE                         
+     00004280  s__CODE                         
+     00004A60  s_DATA                          
+     00004A60  s__HOME                         
+     00004A60  s__INITIALIZER                  
+     00004A7C  s__GSFINAL                      
+     00004A7C  s__GSINIT                       
+     00004A7C  s__MAIN                         
+     00008000  s__DATA                         
+     00008006  s__INITIALIZED                  
+     00008022  s__BSEG                         
+     00008022  s__BSS                          
+     00008022  s__HEAP                         
+ASxxxx Linker V03.00 + NoICE + sdld,  page 2.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_CODE                               00004280    000007E0 =        2016. bytes (REL,CON)
+
+      Value  Global                              Global Defined In Module
+      -----  --------------------------------   ------------------------
+     00004280  _lgets_noecho                      io_kraft80
+     0000431C  _lgets                             io_kraft80
+     000043C5  _putstr                            io_kraft80
+     000043D4  _putstr_lcd                        io_kraft80
+     000043E1  _getchar                           io_kraft80
+     000043E8  _putchar                           io_kraft80
+     000043ED  _setleds                           io_kraft80
+     000043F0  _readbuttons                       io_kraft80
+     000043F4  _putchar_lcd                       io_kraft80
+     000043FC  _lcd_home                          io_kraft80
+     00004402  _lcd_home2                         io_kraft80
+     00004408  _lcd_clear                         io_kraft80
+     0000440E  _lcd_begin                         io_kraft80
+     00004414  _video_setpos                      io_kraft80
+     00004436  _video_out                         io_kraft80
+     00004439  _video_in                          io_kraft80
+     00004440  _video_begin                       io_kraft80
+     00004476  _serial_getchar                    io_kraft80
+     0000447F  _serial_kbhit                      io_kraft80
+     00004489  _serial_putchar                    io_kraft80
+     00004490  _main                              clock
+     0000469A  _di                                clock
+     0000469C  _ei                                clock
+     0000469E  _printlcddec                       clock
+     000046BD  _printtime                         clock
+     000046E5  _new_isr2                          clock
+     0000474C  _rasterchar                        videodisp
+     000047B6  _d0                                videodisp
+     000047BE  _d1                                videodisp
+     000047C6  _d2                                videodisp
+     000047CE  _d3                                videodisp
+     000047D6  _d4                                videodisp
+     000047DE  _d5                                videodisp
+     000047E6  _d6                                videodisp
+     000047EE  _d7                                videodisp
+     000047F6  _d8                                videodisp
+     000047FE  _d9                                videodisp
+     00004806  _d10                               videodisp
+     0000480E  _rasterdec                         videodisp
+     00004908  _video_printtime                   videodisp
+     00004972  _video_border                      videodisp
+     000049DA  ___sdcc_enter_ix                   
+     000049E4  __modschar                         
+     000049EC  __modsint                          
+     000049F2  __divschar                         
+     000049F4  __div8                             
+     000049F8  __div_signexte                     
+     000049FC  __div16                            
+     000049FC  __divsint                          
+     00004A22  __get_remainder                    
+ASxxxx Linker V03.00 + NoICE + sdld,  page 3.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_CODE                               00004280    000007E0 =        2016. bytes (REL,CON)
+
+      Value  Global                              Global Defined In Module
+      -----  --------------------------------   ------------------------
+     00004A2C  __divuchar                         
+     00004A2E  __divu8                            
+     00004A31  __divu16                           
+     00004A31  __divuint                          
+ASxxxx Linker V03.00 + NoICE + sdld,  page 4.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+HEADER0                             00000000    00000034 =          52. bytes (ABS,CON)
+
+      Value  Global                              Global Defined In Module
+      -----  --------------------------------   ------------------------
+ASxxxx Linker V03.00 + NoICE + sdld,  page 5.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_INITIALIZER                        00004A60    0000001C =          28. bytes (REL,CON)
+
+      Value  Global                              Global Defined In Module
+      -----  --------------------------------   ------------------------
+ASxxxx Linker V03.00 + NoICE + sdld,  page 6.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_DATA                               00008000    00000006 =           6. bytes (REL,CON)
+
+      Value  Global                              Global Defined In Module
+      -----  --------------------------------   ------------------------
+     00008000  _pos                               io_kraft80
+     00008002  _isr2vector                        clock
+     00008004  _isr2vector_copy                   clock
+ASxxxx Linker V03.00 + NoICE + sdld,  page 7.
+Hexadecimal  [32-Bits]
+
+Area                                    Addr        Size        Decimal Bytes (Attributes)
+--------------------------------        ----        ----        ------- ----- ------------
+_INITIALIZED                        00008006    0000001C =          28. bytes (REL,CON)
+
+      Value  Global                              Global Defined In Module
+      -----  --------------------------------   ------------------------
+     00008006  _presc                             clock
+     00008008  _hours                             clock
+     00008009  _mins                              clock
+     0000800A  _secs                              clock
+     0000800B  _secs_a                            clock
+     0000800C  _base                              videodisp
+ASxxxx Linker V03.00 + NoICE + sdld,  page 8.
+
+Files Linked                              [ module(s) ]
+
+../io-kraft80/crt0-kraft80-loadable.rel   [ crt0 ]
+../io-kraft80/io-kraft80.rel              [ io_kraft80 ]
+clock.rel                                 [ clock ]
+videodisp.rel                             [ videodisp ]
+
+
+Libraries Linked                          [ object file ]
+
+/usr/bin/../share/sdcc/lib/z80/z80.lib    [ crtenter.rel ]
+/usr/bin/../share/sdcc/lib/z80/z80.lib    [ modsigned.rel ]
+/usr/bin/../share/sdcc/lib/z80/z80.lib    [ divsigned.rel ]
+/usr/bin/../share/sdcc/lib/z80/z80.lib    [ divunsigned.rel ]
+
+ASxxxx Linker V03.00 + NoICE + sdld,  page 9.
+
+User Base Address Definitions
+
+_CODE = 0x4280
+_DATA = 0x8000
+
+

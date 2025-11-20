@@ -1,0 +1,75 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    .__.$$$.=  002710 L   |     .__.ABS.=  000000 G   |     .__.CPU.=  000000 L
+    .__.H$L.=  000000 L   |     BUFKEYSI=  000008     |     BUFRXSIZ=  000080 
+    PORTADDR=  000052     |     PORTADDR=  000051     |     PORTAYAD=  000056 
+    PORTAYDA=  000057     |     PORTBUTT=  000000     |     PORTDATA=  000050 
+    PORTFPGA=  00005F     |     PORTKEY =  000055     |     PORTLEDS=  000000 
+    PORTMODE=  000053     |     PORTSERC=  000058     |     PORTSERD=  000059 
+    PORTSERS=  000058     |     PORTSER_=  000000     |     PORTSER_=  000002 
+    PORTSER_=  000000     |     PORTSER_=  000001     |     PORTTIME=  000054 
+    RAMTOP  =  010000     |     STACKTOP=  00FF00     |     VIDBUFSZ=  000050 
+    VIDCOLS =  000050     |     VIDROWS =  00003C     |     __varend=  00FFF4 
+    _main      ****** GX  |   A _putchar   000206 R   |   A _readkey   00031C R
+    bufkey  =  00FFE7     |     bufkeyge=  00FFF1     |     bufkeyin=  00FFF0 
+    bufkeyqt=  00FFEF     |     bufrx   =  00FF10     |     bufrxget=  00FF91 
+    bufrxins=  00FF90     |     bufrxqty=  00FF92     |   9 fpga_isr   000038 R
+  9 fpga_isr   00004C R   |   9 fpga_isr   00005C R   |   9 fpga_isr   00006A R
+  9 fpga_isr   00003A R   |   A gsinit     0004AD R   |   A gsinit_n   0004BC R
+  A has_rxch   0001B7 R   |   A init       000100 R   |   A init1      000141 R
+    isr0vect=  00FF00     |     isr1vect=  00FF02     |     isr2vect=  00FF04 
+    isr3vect=  00FF06     |     isr4vect=  00FF08     |     isr5vect=  00FF0A 
+    isr6vect=  00FF0C     |     isr7vect=  00FF0E     |   9 key_isr1   000081 R
+  9 key_isr2   00009D R   |   A keypress   0002FA R   |   A keyt1      000325 R
+  A keyt2      00033C R   |   A keyt3      00039A R   |   A keyt3a     000373 R
+  A keyt3b     00037B R   |   A keyt3c     000383 R   |   A keyt3d     00038E R
+  A keyt3e     000396 R   |   A keyt4      0003D1 R   |   A keyt4a     0003D0 R
+  A keyt4b     0003CF R   |   A keyt5      0003A7 R   |   A keyt5a     0003B5 R
+  A keyt5b     0003BC R   |   A keyt6      00034F R   |   A keyt6a     000362 R
+  A keyt6b     00036A R   |   A keyt6c     000370 R   |     kflags  =  00FFF2 
+    l__INITI   ****** GX  |     lastkey =  00FFF3     |   9 mon_getc   0000E2 R
+  9 mon_hask   0000EF R   |   9 mon_putc   0000D5 R   |   A nextrow1   00023B R
+  A prints     000198 GR  |   9 ps2_isr    000077 R   |   A putbs      0001EF R
+  A putchar    0001FE R   |   A putclr     000288 R   |   A putclr1    00029C R
+  A putcnext   00022B R   |   A putcr      00024A R   |   A putlf      000267 R
+  A putlf1     000285 R   |   A putlf2     00027B R   |   A readk1     000316 R
+  A readkey    000308 R   |   A rx_char    0001BC R   |   A rx_char0   0001C3 R
+  A rx_char1   0001E8 R   |   A rx_char2   0001D3 R   |   9 rx_isr     0000A1 R
+  9 rx_isr1    0000AB R   |   9 rx_isr1a   0000B6 R   |   9 rx_isr2    0000D1 R
+    s__INITI   ****** GX  |     s__INITI   ****** GX  |   A scroll3    0002EA R
+  A scroll_c   0002AA R   |   A scroll_s   0002B1 R   |   A serial_f   0001A1 R
+  A signon     00017C R   |     sysflag =  00FFF4     |   A tab_xlat   0003D4 R
+    timecoun=  00FFFE     |   9 timer_is   00006F R   |   A tx_char    0001AE R
+    vidbuf  =  00FF97     |     vidcol  =  00FF94     |     vidptr  =  00FF95 
+    vidrow  =  00FF93     |   A wait1      000152 R   |   A wait_tx    0001B0 R
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+Area Table
+
+   0 _CODE      size      0   flags    0
+   1 _HEADER    size      0   flags    8
+   2 _HEADER0   size      3   flags    8
+   3 _HEADER1   size      3   flags    8
+   4 _HEADER2   size      3   flags    8
+   5 _HEADER3   size      3   flags    8
+   6 _HEADER4   size      3   flags    8
+   7 _HEADER5   size      2   flags    8
+   8 _HEADER6   size      2   flags    8
+   9 _HEADER7   size     C4   flags    8
+   A _HEADER8   size    3BD   flags    8
+   B _HOME      size      0   flags    0
+   C _INITIAL   size      0   flags    0
+   D _GSINIT    size      0   flags    0
+   E _GSFINAL   size      0   flags    0
+   F _MAIN      size      0   flags    0
+  10 _DATA      size      0   flags    0
+  11 _INITIAL   size      0   flags    0
+  12 _BSEG      size      0   flags    0
+  13 _BSS       size      0   flags    0
+  14 _HEAP      size      0   flags    0
+

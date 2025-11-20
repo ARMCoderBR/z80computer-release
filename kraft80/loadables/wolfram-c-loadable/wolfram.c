@@ -11,16 +11,13 @@ Example program for the KRAFT 80
 
 #include "io-kraft80.h"
 
-#pragma codeseg MAIN
+#pragma codeseg CODE
 
 ////////////////////////////////////////////////////////////////////////////////
 int wolfram(int width, int height, int rulenum) {
 
-    char *cells;
-    char *nextcells;
-
-    cells = malloc(width);
-    nextcells = malloc(width);
+    char cells[160];
+    char nextcells[160];
 
     memset(cells, 0, width);
     memset(nextcells, 0, width);
@@ -29,11 +26,12 @@ int wolfram(int width, int height, int rulenum) {
 
     char rule[8];
 
-    int i;
-
     int mask = 1;
 
     ////////////////////////////////////////////////////////////////////////////
+
+    int i;
+
     for (i = 0; i < 8; i++) {
 
         if (rulenum & mask)
@@ -61,7 +59,6 @@ int wolfram(int width, int height, int rulenum) {
             else
                 putstr(" ");
         }
-        
 
         putstr(".\r\n.");
 
@@ -87,9 +84,6 @@ int wolfram(int width, int height, int rulenum) {
         putstr("=");
 
     putstr(".\r\n");
-
-    free(cells);
-    free(nextcells);
 
     return 0;
 }

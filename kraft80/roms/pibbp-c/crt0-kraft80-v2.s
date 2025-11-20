@@ -28,7 +28,8 @@
 
 ;;;-----------------------------------------------------------------------
 ;;; INTERRUPT HANDLERS & VECTORS
-;;; HARDWARE DRIVERS FOR 8251/8259
+;;; HARDWARE DRIVERS FOR THE TANG NANO HARDWARE:
+;;;    VIDEO, SERIAL, TIMER & PS/2 KEYBOARD
 ;;;    BY ARMCODER - 2025
 ;;;-----------------------------------------------------------------------
 

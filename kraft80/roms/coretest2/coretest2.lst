@@ -1,0 +1,430 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+
+
+                                      1 ; =============================================================================
+                                      2 ;
+                                      3 ;   KRAFT 80 Z80 Computer
+                                      4 ;   Core Test 1 Program for the Kraft 80 computer
+                                      5 ;   2025-Jul-09
+                                      6 ;   Milton Maldonado Jr. (ARMCoder)
+                                      7 ;
+                                      8 ;   LCD Controller functions (lcd_begin >> end):
+                                      9 ;     Author: Dr. Eng. Wagner Rambo
+                                     10 ;     Date:   2025, January       
+                                     11 ;
+                                     12 ; =============================================================================
+                                     13 
+                                     14 
+                                     15 ; =============================================================================
+                                     16 ; --- Hardware Mapping ---
+                           000000    17 PORTBUTTONS     .equ 0x00 ;PORTX address (Read) 
+                           000000    18 PORTLEDS        .equ 0x00 ;PORTA address (Write)
+                           000010    19 PORTDISP        .equ 0x10 ;PORTB address (Write)
+                                     20 
+                                     21 
+                           000000    22 ROMBASE         .equ 0
+                           002000    23 ROMSZ           .equ 0x2000
+                           002000    24 RAMBASE         .equ 0x2000
+                           006000    25 RAMSZ           .equ 0x6000
+                                     26 
+                           008000    27 RAMHBASE	.equ 0x8000
+                           008000    28 RAMHSZ		.equ 0x8000
+                                     29 
+                           008000    30 STACKTOP .equ	(RAMBASE+RAMSZ)
+                                     31 
+                                     32 ; =============================================================================
+                                     33 ; --- Reset Vector ---
+                                     34 
+                                     35 	.area	_HEADER (ABS)
+                                     36 
+      000000                         37 	.org	0x0000			;origem no endereço 00h de memória
+                                     38 
+                                     39 ; =============================================================================
+                                     40 ; --- Main Program ---
+                                     41 
+      000000 31 00 80         [10]   42 	ld	sp,#STACKTOP
+      000003 CD 50 01         [17]   43 	call	lcd_init
+                                     44 
+      000006 CD F1 00         [17]   45 	call	msg_init
+      000009 06 42            [ 7]   46 	ld	b,#66
+      00000B C5               [11]   47 wait1s:	push	bc
+      00000C CD BB 01         [17]   48 	call	delay_15ms
+      00000F C1               [10]   49 	pop	bc
+      000010 10 F9            [13]   50 	djnz	wait1s
+                                     51 
+      000012 CD 42 01         [17]   52 	call	lcd_clear
+                                     53 
+      000015 CD 31 00         [17]   54 	call	test_rams
+                                     55 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+
+
+      000018 21 00 C0         [10]   56 	ld	hl,#0xc000
+      00001B 16 01            [ 7]   57 	ld	d,#1
+                                     58 
+      00001D 23               [ 6]   59 loop:	inc	hl
+      00001E 7C               [ 4]   60 	ld	a,h
+      00001F B5               [ 4]   61 	or	l
+      000020 20 FB            [12]   62 	jr	nz,loop
+                                     63 
+      000022 21 00 C0         [10]   64 	ld	hl,#0xc000
+                                     65 
+      000025 DB 00            [11]   66 	in	a,(PORTBUTTONS)
+      000027 2F               [ 4]   67 	cpl
+      000028 4F               [ 4]   68 	ld	c,a
+      000029 7A               [ 4]   69 	ld	a,d
+      00002A B1               [ 4]   70 	or	c
+                                     71 
+      00002B D3 00            [11]   72 	out	(PORTLEDS),a
+                                     73 
+      00002D CB 0A            [ 8]   74 	rrc	d
+      00002F 18 EC            [12]   75 	jr	loop
+                                     76 
+                                     77 ; =============================================================================
+      000031                         78 test_rams:
+                                     79 
+      000031 21 00 20         [10]   80 	ld	hl,#RAMBASE
+      000034 06 5F            [ 7]   81 	ld	b,#(RAMSZ-0x100) / 0x100  ;Protects the top to not trample the stack
+      000036 11 00 01         [10]   82 	ld	de,#0x100
+      000039 3E 01            [ 7]   83 	ld	a,#1
+      00003B                         84 testra1:
+      00003B 77               [ 7]   85 	ld	(hl),a
+      00003C 3C               [ 4]   86 	inc	a
+      00003D 19               [11]   87 	add	hl,de
+      00003E 10 FB            [13]   88 	djnz	testra1
+                                     89 	
+      000040 21 00 80         [10]   90 	ld	hl,#RAMHBASE
+      000043 06 80            [ 7]   91 	ld	b,#RAMHSZ / 0x100
+      000045 3E 03            [ 7]   92 	ld	a,#3
+      000047                         93 testra2:
+      000047 77               [ 7]   94 	ld	(hl),a
+      000048 3C               [ 4]   95 	inc	a
+      000049 19               [11]   96 	add	hl,de
+      00004A 10 FB            [13]   97 	djnz	testra2
+                                     98 
+      00004C DD 21 00 00      [14]   99 	ld	ix,#0
+                                    100 
+      000050 21 00 20         [10]  101 	ld	hl,#RAMBASE
+      000053 06 5F            [ 7]  102 	ld	b,#(RAMSZ-0x100) / 0x100  ;Protects the top to not trample the stack
+      000055 11 00 01         [10]  103 	ld	de,#0x100
+      000058 0E 01            [ 7]  104 	ld	c,#1
+      00005A                        105 testra3:
+      00005A 7E               [ 7]  106 	ld	a,(hl)
+      00005B B9               [ 4]  107 	cp	c
+      00005C 20 06            [12]  108 	jr	nz,ramloerr
+      00005E 0C               [ 4]  109 	inc	c
+      00005F 19               [11]  110 	add	hl,de
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 3.
+Hexadecimal [24-Bits]
+
+
+
+      000060 10 F8            [13]  111 	djnz	testra3
+      000062 18 02            [12]  112 	jr	testra4ini
+                                    113 
+      000064                        114 ramloerr:
+      000064 DD 23            [10]  115 	inc	ix
+                                    116 	
+      000066                        117 testra4ini:
+      000066 21 00 80         [10]  118 	ld	hl,#RAMHBASE
+      000069 06 80            [ 7]  119 	ld	b,#RAMHSZ / 0x100
+      00006B 0E 03            [ 7]  120 	ld	c,#3
+      00006D                        121 testra4:
+      00006D 7E               [ 7]  122 	ld	a,(hl)
+      00006E B9               [ 4]  123 	cp	c
+      00006F 20 06            [12]  124 	jr	nz,ramhierr
+      000071 0C               [ 4]  125 	inc	c
+      000072 19               [11]  126 	add	hl,de
+      000073 10 F8            [13]  127 	djnz	testra4
+      000075 18 04            [12]  128 	jr	testra5
+                                    129 	
+      000077                        130 ramhierr:
+      000077 DD 23            [10]  131 	inc	ix
+      000079 DD 23            [10]  132 	inc	ix
+                                    133 
+      00007B                        134 testra5:
+      00007B 3E 52            [ 7]  135 	ld	a,#'R'
+      00007D CD 01 01         [17]  136 	call 	lcd_write 
+      000080 3E 41            [ 7]  137 	ld	a,#'A'
+      000082 CD 01 01         [17]  138 	call 	lcd_write 
+      000085 3E 4D            [ 7]  139 	ld	a,#'M'
+      000087 CD 01 01         [17]  140 	call 	lcd_write 
+      00008A 3E 30            [ 7]  141 	ld	a,#'0'
+      00008C CD 01 01         [17]  142 	call 	lcd_write 
+      00008F 3E 3A            [ 7]  143 	ld	a,#':'
+      000091 CD 01 01         [17]  144 	call 	lcd_write 
+                                    145 
+      000094 DD E5            [15]  146 	push	ix
+      000096 E1               [10]  147 	pop	hl
+      000097 CB 45            [ 8]  148 	bit	0,l
+      000099 20 0C            [12]  149 	jr	nz,err_raml
+                                    150 
+      00009B 3E 4F            [ 7]  151 	ld	a,#'O'
+      00009D CD 01 01         [17]  152 	call 	lcd_write 
+      0000A0 3E 4B            [ 7]  153 	ld	a,#'K'
+      0000A2 CD 01 01         [17]  154 	call 	lcd_write 
+      0000A5 18 0A            [12]  155 	jr	ramh
+                                    156 
+      0000A7                        157 err_raml:
+      0000A7 3E 45            [ 7]  158 	ld	a,#'E'
+      0000A9 CD 01 01         [17]  159 	call 	lcd_write 
+      0000AC 3E 52            [ 7]  160 	ld	a,#'R'
+      0000AE CD 01 01         [17]  161 	call 	lcd_write 
+                                    162 
+      0000B1                        163 ramh:
+      0000B1 3E 20            [ 7]  164 	ld	a,#' '
+      0000B3 CD 01 01         [17]  165 	call 	lcd_write 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 4.
+Hexadecimal [24-Bits]
+
+
+
+      0000B6 3E 20            [ 7]  166 	ld	a,#' '
+      0000B8 CD 01 01         [17]  167 	call 	lcd_write 
+      0000BB 3E 52            [ 7]  168 	ld	a,#'R'
+      0000BD CD 01 01         [17]  169 	call 	lcd_write 
+      0000C0 3E 41            [ 7]  170 	ld	a,#'A'
+      0000C2 CD 01 01         [17]  171 	call 	lcd_write 
+      0000C5 3E 4D            [ 7]  172 	ld	a,#'M'
+      0000C7 CD 01 01         [17]  173 	call 	lcd_write 
+      0000CA 3E 31            [ 7]  174 	ld	a,#'1'
+      0000CC CD 01 01         [17]  175 	call 	lcd_write 
+      0000CF 3E 3A            [ 7]  176 	ld	a,#':'
+      0000D1 CD 01 01         [17]  177 	call 	lcd_write 
+                                    178 
+      0000D4 DD E5            [15]  179 	push	ix
+      0000D6 E1               [10]  180 	pop	hl
+      0000D7 CB 4D            [ 8]  181 	bit	1,l
+      0000D9 20 0B            [12]  182 	jr	nz,err_ramh
+                                    183 
+      0000DB 3E 4F            [ 7]  184 	ld	a,#'O'
+      0000DD CD 01 01         [17]  185 	call 	lcd_write 
+      0000E0 3E 4B            [ 7]  186 	ld	a,#'K'
+      0000E2 CD 01 01         [17]  187 	call 	lcd_write 
+      0000E5 C9               [10]  188 	ret
+                                    189 
+      0000E6                        190 err_ramh:
+      0000E6 3E 45            [ 7]  191 	ld	a,#'E'
+      0000E8 CD 01 01         [17]  192 	call 	lcd_write 
+      0000EB 3E 52            [ 7]  193 	ld	a,#'R'
+      0000ED C3 01 01         [10]  194 	jp 	lcd_write 
+                                    195 
+      0000F0 C9               [10]  196 	ret
+                                    197 
+      0000F1                        198 msg_init:
+      0000F1 21 F7 00         [10]  199 	ld	hl,#msgtitle
+      0000F4 C3 1D 01         [10]  200 	jp	lcd_wmsg
+                                    201 
+      0000F7                        202 msgtitle:
+      0000F7 43 6F 72 65 74 65 73   203 	.ascii	"Coretest2\0"
+             74 32 00
+                                    204 
+                                    205 	;///////////////////////////////////////////////////////////////////////
+                                    206 	;//////////////////////   LCD DISPLAY FUNCTIONS   //////////////////////
+                                    207 	;///////////////////////////////////////////////////////////////////////
+                                    208 
+      000101                        209 lcd_write:
+                                    210 	;RS R/W DB7 DB6 DB5 DB4
+                                    211 	;1   0   D7  D6  D5  D4
+      000101 C5               [11]  212 	push	bc
+                                    213 
+      000102 4F               [ 4]  214 	ld	c,a
+      000103 E6 F0            [ 7]  215 	and	#0xf0
+      000105 F6 01            [ 7]  216 	or	#0x01
+      000107 CD A3 01         [17]  217 	call	lcd_out
+                                    218 
+                                    219 	;RS R/W DB7 DB6 DB5 DB4
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 5.
+Hexadecimal [24-Bits]
+
+
+
+                                    220 	;1   0   D3  D2  D1  D0
+      00010A 79               [ 4]  221 	ld	a,c		
+      00010B CB 27            [ 8]  222 	sla	a
+      00010D CB 27            [ 8]  223 	sla	a
+      00010F CB 27            [ 8]  224 	sla	a
+      000111 CB 27            [ 8]  225 	sla	a
+      000113 F6 01            [ 7]  226 	or	#0x01
+      000115 CD A3 01         [17]  227 	call	lcd_out
+                                    228 
+      000118 CD B2 01         [17]  229 	call	delay_5ms
+                                    230 
+      00011B C1               [10]  231 	pop	bc
+                                    232 
+      00011C C9               [10]  233 	ret
+                                    234 
+                                    235 ;///////////////////////////////////////////////////////////////////////////////
+      00011D                        236 lcd_wmsg:	
+      00011D 7E               [ 7]  237 	ld	a,(hl)
+      00011E B7               [ 4]  238 	or	a
+      00011F C8               [11]  239 	ret	z
+      000120 CD 01 01         [17]  240 	call	lcd_write
+      000123 23               [ 6]  241 	inc	hl
+      000124 18 F7            [12]  242 	jr	lcd_wmsg
+                                    243 
+                                    244 ;///////////////////////////////////////////////////////////////////////////////
+      000126                        245 lcd_home:
+                                    246 	;RS R/W DB7 DB6 DB5 DB4
+                                    247 	;0   0   0   0   0   0
+      000126 3E 00            [ 7]  248 	ld	a,#0b00000000
+      000128 CD A3 01         [17]  249 	call	lcd_out
+                                    250 	;RS R/W DB3 DB2 DB1 DB0
+                                    251 	;0   0   0   0   1   0
+      00012B 3E 20            [ 7]  252 	ld	a,#0b00100000
+      00012D CD A3 01         [17]  253 	call	lcd_out
+                                    254 
+      000130 CD B2 01         [17]  255 	call	delay_5ms
+      000133 C9               [10]  256 	ret
+                                    257 
+                                    258 ;///////////////////////////////////////////////////////////////////////////////
+      000134                        259 lcd_home2:
+                                    260 	;RS R/W DB7 DB6 DB5 DB4
+                                    261 	;0   0   1   1   0   0
+      000134 3E C0            [ 7]  262 	ld	a,#0b11000000
+      000136 CD A3 01         [17]  263 	call	lcd_out
+                                    264 	;RS R/W DB3 DB2 DB1 DB0
+                                    265 	;0   0   0   0   0   0
+      000139 3E 00            [ 7]  266 	ld	a,#0b00000000
+      00013B CD A3 01         [17]  267 	call	lcd_out
+                                    268 
+      00013E CD B2 01         [17]  269 	call	delay_5ms
+      000141 C9               [10]  270 	ret
+                                    271 
+                                    272 ;///////////////////////////////////////////////////////////////////////////////
+      000142                        273 lcd_clear:
+                                    274 	;RS R/W DB7 DB6 DB5 DB4
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 6.
+Hexadecimal [24-Bits]
+
+
+
+                                    275 	;0   0   0   0   0   0
+      000142 3E 00            [ 7]  276 	ld	a,#0b00000000
+      000144 CD A3 01         [17]  277 	call	lcd_out
+                                    278 	;RS R/W DB3 DB2 DB1 DB0
+                                    279 	;0   0   0   0   0   1
+      000147 3E 10            [ 7]  280 	ld	a,#0b00010000
+      000149 CD A3 01         [17]  281 	call	lcd_out
+                                    282 
+      00014C CD B2 01         [17]  283 	call	delay_5ms
+      00014F C9               [10]  284 	ret
+                                    285 
+                                    286 ;///////////////////////////////////////////////////////////////////////////////
+      000150                        287 lcd_init:
+      000150 CD BB 01         [17]  288 	call	delay_15ms
+                                    289 
+                                    290 	;RS R/W DB7 DB6 DB5 DB4
+                                    291 	;0   0   0   0   1   1
+      000153 3E 30            [ 7]  292 	ld	a,#0b00110000
+      000155 CD A3 01         [17]  293 	call	lcd_out
+      000158 CD B2 01         [17]  294 	call	delay_5ms
+      00015B 3E 30            [ 7]  295 	ld	a,#0b00110000
+      00015D CD A3 01         [17]  296 	call	lcd_out
+      000160 CD B2 01         [17]  297 	call	delay_5ms
+                                    298 
+                                    299 	;RS R/W DB7 DB6 DB5 DB4
+                                    300 	;0   0   0   0   1   0
+      000163 3E 20            [ 7]  301 	ld	a,#0b00100000		; Set 4 bit mode
+      000165 CD A3 01         [17]  302 	call	lcd_out
+                                    303 
+      000168 CD B2 01         [17]  304 	call	delay_5ms
+                                    305 
+                                    306 	;RS R/W DB7 DB6 DB5 DB4
+                                    307 	;0   0   0   0   1   0
+      00016B 3E 20            [ 7]  308 	ld	a,#0b00100000		; Will set N F
+      00016D CD A3 01         [17]  309 	call	lcd_out
+                                    310 	;RS R/W DB3 DB2 DB1 DB0
+                                    311 	;0   0   N   F   x   x  N=1 F=1
+      000170 3E C0            [ 7]  312 	ld	a,#0b11000000
+      000172 CD A3 01         [17]  313 	call	lcd_out
+                                    314 
+      000175 CD B2 01         [17]  315 	call	delay_5ms
+                                    316 
+                                    317 	;RS R/W DB7 DB6 DB5 DB4
+                                    318 	;0   0   0   0   0   0
+      000178 3E 00            [ 7]  319 	ld	a,#0b00000000		; Will turn display on
+      00017A CD A3 01         [17]  320 	call	lcd_out
+                                    321 	;RS R/W DB3 DB2 DB1 DB0
+                                    322 	;0   0   1   1   0   0
+      00017D 3E C0            [ 7]  323 	ld	a,#0b11000000
+      00017F CD A3 01         [17]  324 	call	lcd_out
+                                    325 
+      000182 CD B2 01         [17]  326 	call	delay_5ms
+                                    327 
+                                    328 	;RS R/W DB7 DB6 DB5 DB4
+                                    329 	;0   0   0   0   0   0
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 7.
+Hexadecimal [24-Bits]
+
+
+
+      000185 3E 00            [ 7]  330 	ld	a,#0b00000000		; Will clear display
+      000187 CD A3 01         [17]  331 	call	lcd_out
+                                    332 	;RS R/W DB3 DB2 DB1 DB0
+                                    333 	;0   0   0   0   0   1
+      00018A 3E 10            [ 7]  334 	ld	a,#0b00010000
+      00018C CD A3 01         [17]  335 	call	lcd_out
+                                    336 
+      00018F CD B2 01         [17]  337 	call	delay_5ms
+                                    338 
+                                    339 	;RS R/W DB7 DB6 DB5 DB4
+                                    340 	;0   0   0   0   0   0
+      000192 3E 00            [ 7]  341 	ld	a,#0b00000000		; Will set Increment mode
+      000194 CD A3 01         [17]  342 	call	lcd_out		; No shift
+                                    343 	;RS R/W DB3 DB2 DB1 DB0
+                                    344 	;0   0   0   1   1   0
+      000197 3E 60            [ 7]  345 	ld	a,#0b01100000
+      000199 CD A3 01         [17]  346 	call	lcd_out
+                                    347 
+      00019C CD B2 01         [17]  348 	call	delay_5ms
+                                    349 
+      00019F CD 26 01         [17]  350 	call	lcd_home
+      0001A2 C9               [10]  351 	ret
+                                    352 
+                                    353 ;///////////////////////////////////////////////////////////////////////////////
+      0001A3                        354 lcd_out:
+      0001A3 D3 10            [11]  355 	out	(PORTDISP),a
+      0001A5 00               [ 4]  356 	nop
+      0001A6 00               [ 4]  357 	nop
+      0001A7 CB CF            [ 8]  358 	set	1,a
+      0001A9 D3 10            [11]  359 	out	(PORTDISP),a
+      0001AB 00               [ 4]  360 	nop
+      0001AC 00               [ 4]  361 	nop
+      0001AD CB 8F            [ 8]  362 	res	1,a
+      0001AF D3 10            [11]  363 	out	(PORTDISP),a
+      0001B1 C9               [10]  364 	ret
+                                    365 
+                                    366 ;///////////////////////////////////////////////////////////////////////////////
+      0001B2                        367 delay_5ms:	
+      0001B2 01 00 03         [10]  368 	ld	bc,#768		; 2.5us
+      0001B5                        369 delay_5ms_a:	
+      0001B5 0B               [ 6]  370 	dec	bc		; 1.5 us
+      0001B6 78               [ 4]  371 	ld	a,b		; 1 us
+      0001B7 B1               [ 4]  372 	or	c		; 1 us
+      0001B8 20 FB            [12]  373 	jr	nz,delay_5ms_a	; 3 us
+      0001BA C9               [10]  374 	ret			; 2.5 us
+                                    375 
+                                    376 ;///////////////////////////////////////////////////////////////////////////////
+      0001BB                        377 delay_15ms:	
+      0001BB 01 03 09         [10]  378 	ld	bc,#2307	; 2.5us
+      0001BE                        379 delay_15ms_a:	
+      0001BE 0B               [ 6]  380 	dec	bc		; 1.5 us
+      0001BF 78               [ 4]  381 	ld	a,b		; 1 us
+      0001C0 B1               [ 4]  382 	or	c		; 1 us
+      0001C1 20 FB            [12]  383 	jr	nz,delay_15ms_a	; 3 us
+      0001C3 C9               [10]  384 	ret			; 2.5 us
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 8.
+Hexadecimal [24-Bits]
+
+
+
+                                    385 
+                                    386 ;=======================================================
+                                    387 ; --- Final do Programa ---
+                                    388 	.area _DATA
+                                    389 

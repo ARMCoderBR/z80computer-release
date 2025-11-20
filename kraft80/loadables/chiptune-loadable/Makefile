@@ -2,7 +2,7 @@ all:				chiptunes.bin
 
 chiptunes.bin:			chiptunes.s
 				sdasz80 -o -l -s -g chiptunes.s
-				sdcc -mz80 --no-std-crt0 chiptunes.rel
+				sdcc -mz80 --no-std-crt0 --code-loc 0x4200 chiptunes.rel
 				objcopy --input-target=ihex --output-target=binary chiptunes.ihx chiptunes.bin
 
 clean:

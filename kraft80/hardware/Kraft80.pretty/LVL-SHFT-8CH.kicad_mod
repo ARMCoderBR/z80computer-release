@@ -55,8 +55,8 @@
 	)
 	(attr board_only exclude_from_pos_files exclude_from_bom)
 	(fp_rect
-		(start -8.255 -13.97)
-		(end 8.255 13.97)
+		(start -7.005 -13.97)
+		(end 7.255 13.97)
 		(stroke
 			(width 0.1)
 			(type default)

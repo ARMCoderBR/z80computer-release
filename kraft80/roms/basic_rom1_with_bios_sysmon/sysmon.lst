@@ -1,0 +1,659 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+
+
+                                      1 ;--------------------------------------------------------------------------
+                                      2 ;  sysmon.s - Simple monior for the Kraft 80
+                                      3 ;
+                                      4 ;  Copyright (C) 2025, ARMCoder
+                                      5 ;
+                                      6 ;--------------------------------------------------------------------------
+                                      7 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+
+
+                                      8 	.include "defines.s"
+                           004000     1 RAMBASE		.equ 0x4000
+                           004200     2 RAMTOP		.equ RAMBASE+0x200	;0x4200
+                           0041FE     3 timecount	.equ RAMTOP-2		;0x41fe
+                                      4 
+                                      5 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 3.
+Hexadecimal [24-Bits]
+
+
+
+                                      9 
+                                     10 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                     11 ; LEDS & BUTTONS
+                           000000    12 PORTLEDS	.equ	0x00
+                           000000    13 PORTBUTTONS	.equ	0x00
+                           000010    14 PORTDISP	.equ	0x10
+                                     15 
+                                     16 ;RAMBASE	.equ	0x4000
+                           000080    17 SYSM_BUFSZ	.equ	128
+                           004000    18 SYSM_BUF	.equ	RAMBASE
+                           004080    19 SYSM_BUFPTR	.equ	SYSM_BUF+SYSM_BUFSZ
+                           004081    20 SYSM_LASTDM 	.equ	SYSM_BUFPTR+1
+                           004083    21 SYSM_LASTED 	.equ	SYSM_LASTDM+2
+                           004085    22 SYSM_FLAGS	.equ	SYSM_LASTED+2
+                                     23 
+                           000001    24 SOH 		.equ	1
+                           000004    25 EOT		.equ	4
+                           000006    26 ACK		.equ	6
+                           00000D    27 CR		.equ	13
+                           000015    28 NAK		.equ	21
+                           00001B    29 ESC		.equ	27
+                                     30 
+                                     31 	;///////////////////////////////////////////////////////////////////////
+                                     32 	;////////////////////////   SYSMON MONITOR   ///////////////////////////
+                                     33 	;///////////////////////////////////////////////////////////////////////
+                                     34 
+                                     35 	.module sysmon
+                                     36 
+                                     37 	.globl sysmon
+                                     38 
+                                     39 	.area	CODE
+                                     40 
+                                     41 
+      000000                         42 signon_sysmon:
+      000000 0D 0A 53 79 73 6D 6F    43 	.ascii	'\r\nSysmon by ARMCoder\r\n\n\0'
+             6E 20 62 79 20 41 52
+             4D 43 6F 64 65 72 0D
+             0A 0A 00
+                                     44 
+      000018                         45 sysmon:
+      000018 21 00 00         [10]   46 	ld	hl,#signon_sysmon
+      00001B CD 00 00         [17]   47 	call	prints
+                                     48 
+      00001E 21 00 42         [10]   49 	ld	hl,#RAMTOP
+      000021 22 81 40         [16]   50 	ld	(SYSM_LASTDM),hl
+      000024 22 83 40         [16]   51 	ld	(SYSM_LASTED),hl
+                                     52 
+      000027 AF               [ 4]   53 	xor	a
+      000028 32 85 40         [13]   54 	ld	(SYSM_FLAGS),a
+      00002B DB 00            [11]   55 	in	a,(PORTBUTTONS)
+      00002D CB 77            [ 8]   56 	bit	6,a
+      00002F 20 21            [12]   57 	jr	nz,sysmon_loop
+                                     58 
+      000031 3E 01            [ 7]   59 	ld	a,#1
+      000033 32 85 40         [13]   60 	ld	(SYSM_FLAGS),a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 4.
+Hexadecimal [24-Bits]
+
+
+
+                                     61 	
+      000036 0E 09            [ 7]   62 	ld	c,#9
+      000038 E7               [11]   63 	rst	0x20
+      000039 0E 0D            [ 7]   64 	ld	c,#13
+      00003B 21 42 00         [10]   65 	ld	hl,#msg_ld_xmodem
+      00003E E7               [11]   66 	rst	0x20
+      00003F C3 9F 02         [10]   67 	jp	load_xmodem
+                                     68 	
+      000042                         69 msg_ld_xmodem:
+      000042 4C 6F 61 64 69 6E 67    70 	.ascii	"Loading XMODEM.\0"
+             20 58 4D 4F 44 45 4D
+             2E 00
+                                     71 
+      000052                         72 sysmon_loop:
+      000052 AF               [ 4]   73 	xor	a
+      000053 32 80 40         [13]   74 	ld	(SYSM_BUFPTR),a
+                                     75 
+      000056 CD 67 00         [17]   76 	call sysm_prompt
+                                     77 
+      000059 18 F7            [12]   78 	jr	sysmon_loop
+                                     79 
+                                     80 	;///////////////////////////////////////////////////////////////////////
+      00005B                         81 str_basic:
+      00005B 62 61 73 69 63          82 	.ascii	'basic'
+      000060 00                      83 	.byte	0
+                                     84 
+      000061                         85 str_loadx:
+      000061 6C 6F 61 64 78          86 	.ascii	'loadx'
+      000066 00                      87 	.byte	0
+                                     88 
+      000067                         89 sysm_prompt:
+      000067 3E 3A            [ 7]   90 	ld	a,#':'
+      000069 CF               [11]   91 	rst	0x08
+      00006A CD 24 02         [17]   92 	call	sysm_readline
+      00006D CD 1D 02         [17]   93 	call	sysm_crlf
+                                     94 
+      000070 21 00 40         [10]   95 	ld	hl,#SYSM_BUF
+      000073 11 5B 00         [10]   96 	ld	de,#str_basic
+      000076 CD EB 01         [17]   97 	call	strcompare
+      000079 CA 00 20         [10]   98 	jp	z,#0x2000	; Jump to BASIC
+                                     99 
+      00007C 21 00 40         [10]  100 	ld	hl,#SYSM_BUF
+      00007F 11 61 00         [10]  101 	ld	de,#str_loadx
+      000082 CD EB 01         [17]  102 	call	strcompare
+      000085 CA 9F 02         [10]  103 	jp	z,load_xmodem
+                                    104 
+      000088 3A 00 40         [13]  105 	ld	a,(SYSM_BUF)	; Check 'd' command
+      00008B FE 64            [ 7]  106 	cp	#'d'
+      00008D CA 3D 01         [10]  107 	jp	z,sysm_dump
+                                    108 
+      000090 FE 65            [ 7]  109 	cp	#'e'		; Check 'e' command
+      000092 28 2D            [12]  110 	jr	z,sysm_edit
+                                    111 
+      000094 FE 67            [ 7]  112 	cp	#'g'		; Check 'g' command
+      000096 28 07            [12]  113 	jr	z,sysm_go
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 5.
+Hexadecimal [24-Bits]
+
+
+
+                                    114 
+      000098 C9               [10]  115 	ret
+                                    116 
+                                    117 	;///////////////////////////////////////////////////////////////////////
+      000099 47 6F 21               118 str_go:	.ascii	'Go!'
+      00009C 0D 0A 00               119 	.byte	13,10,0
+                                    120 
+      00009F                        121 sysm_go:
+      00009F 21 99 00         [10]  122 	ld	hl,#str_go
+      0000A2 CD 00 00         [17]  123 	call	prints
+      0000A5 21 BA 00         [10]  124 	ld	hl,#sysm_goret
+      0000A8 E5               [11]  125 	push	hl
+      0000A9 21 01 40         [10]  126 	ld	hl,#SYSM_BUF+1
+      0000AC CD 80 01         [17]  127 	call	skip_spc
+      0000AF CD A3 01         [17]  128 	call	parsehex16
+      0000B2 21 00 42         [10]  129 	ld	hl,#RAMTOP
+      0000B5 28 02            [12]  130 	jr	z,sysm_go2
+      0000B7 62               [ 4]  131 	ld	h,d
+      0000B8 6B               [ 4]  132 	ld	l,e
+      0000B9                        133 sysm_go2:
+      0000B9 E9               [ 4]  134 	jp	(hl)
+                                    135 
+      0000BA                        136 sysm_goret:
+      0000BA 3E 0D            [ 7]  137 	ld	a,#13
+      0000BC CF               [11]  138 	rst	0x08
+      0000BD 3E 0A            [ 7]  139 	ld	a,#10
+      0000BF CF               [11]  140 	rst	0x08
+      0000C0 C9               [10]  141 	ret
+                                    142 
+                                    143 	;///////////////////////////////////////////////////////////////////////
+      0000C1                        144 sysm_edit:
+      0000C1 21 01 40         [10]  145 	ld	hl,#SYSM_BUF+1
+      0000C4 CD 80 01         [17]  146 	call	skip_spc
+      0000C7 CD A3 01         [17]  147 	call	parsehex16
+      0000CA 28 05            [12]  148 	jr	z,sysm_editloop
+      0000CC 62               [ 4]  149 	ld	h,d
+      0000CD 6B               [ 4]  150 	ld	l,e
+      0000CE 22 83 40         [16]  151 	ld	(SYSM_LASTED),hl
+                                    152 
+      0000D1                        153 sysm_editloop:
+                                    154 
+      0000D1 2A 83 40         [16]  155 	ld	hl,(SYSM_LASTED)
+      0000D4 7C               [ 4]  156 	ld	a,h
+      0000D5 CD F8 01         [17]  157 	call	sysm_printh8	
+      0000D8 7D               [ 4]  158 	ld	a,l
+      0000D9 CD F8 01         [17]  159 	call	sysm_printh8	
+      0000DC 3E 3A            [ 7]  160 	ld	a,#':'
+      0000DE CF               [11]  161 	rst	0x08
+                                    162 
+      0000DF 0E 00            [ 7]  163 	ld	c,#0
+                                    164 
+      0000E1 C5               [11]  165 	push	bc
+      0000E2 CD 24 02         [17]  166 	call	sysm_readline
+      0000E5 CD 1D 02         [17]  167 	call	sysm_crlf
+      0000E8 C1               [10]  168 	pop	bc
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 6.
+Hexadecimal [24-Bits]
+
+
+
+                                    169 
+      0000E9 21 00 40         [10]  170 	ld	hl,#SYSM_BUF
+                                    171 
+      0000EC                        172 sysm_editloop2:
+      0000EC CD 80 01         [17]  173 	call	skip_spc
+      0000EF CD 87 01         [17]  174 	call	parsehex8
+      0000F2 28 0D            [12]  175 	jr	z,sysm_edit2
+                                    176 
+      0000F4 E5               [11]  177 	push	hl
+      0000F5 2A 83 40         [16]  178 	ld	hl,(SYSM_LASTED)
+      0000F8 73               [ 7]  179 	ld	(hl),e
+      0000F9 23               [ 6]  180 	inc	hl
+      0000FA 22 83 40         [16]  181 	ld	(SYSM_LASTED),hl
+      0000FD E1               [10]  182 	pop	hl
+      0000FE 0C               [ 4]  183 	inc	c
+      0000FF 18 EB            [12]  184 	jr	sysm_editloop2
+                                    185 
+      000101                        186 sysm_edit2:
+      000101 79               [ 4]  187 	ld	a,c
+      000102 B7               [ 4]  188 	or	a
+      000103 20 CC            [12]  189 	jr	nz,sysm_editloop
+      000105 C9               [10]  190 	ret
+                                    191 	
+                                    192 	;///////////////////////////////////////////////////////////////////////
+      000106                        193 dumphdr:
+      000106 20 20 20 20 20 20 30   194 	.ascii	'      0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F'
+             20 20 31 20 20 32 20
+             20 33 20 20 34 20 20
+             35 20 20 36 20 20 37
+             20 20 38 20 20 39 20
+             20 41 20 20 42 20 20
+             43 20 20 44 20 20 45
+             20 20 46
+      00013A 0D 0A 00               195 	.byte 13,10,0
+                                    196 
+      00013D                        197 sysm_dump:
+      00013D 21 01 40         [10]  198 	ld	hl,#SYSM_BUF+1
+      000140 CD 80 01         [17]  199 	call	skip_spc
+      000143 CD A3 01         [17]  200 	call	parsehex16
+      000146 28 05            [12]  201 	jr	z,sysm_dump0
+      000148 62               [ 4]  202 	ld	h,d
+      000149 6B               [ 4]  203 	ld	l,e
+      00014A 22 81 40         [16]  204 	ld	(SYSM_LASTDM),hl
+                                    205 
+      00014D                        206 sysm_dump0:
+      00014D 21 06 01         [10]  207 	ld	hl,#dumphdr
+      000150 CD 00 00         [17]  208 	call	prints
+      000153 06 08            [ 7]  209 	ld	b,#8
+                                    210 
+      000155                        211 sysm_dump1:
+      000155 2A 81 40         [16]  212 	ld	hl,(SYSM_LASTDM)
+      000158 7C               [ 4]  213 	ld	a,h
+      000159 CD F8 01         [17]  214 	call	sysm_printh8	
+      00015C 7D               [ 4]  215 	ld	a,l
+      00015D CD F8 01         [17]  216 	call	sysm_printh8	
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 7.
+Hexadecimal [24-Bits]
+
+
+
+      000160 3E 3A            [ 7]  217 	ld	a,#':'
+      000162 CF               [11]  218 	rst	0x08
+                                    219 
+      000163 0E 10            [ 7]  220 	ld	c,#16
+                                    221 
+      000165                        222 sysm_dump2:
+      000165 7E               [ 7]  223 	ld	a,(hl)
+      000166 CD F8 01         [17]  224 	call	sysm_printh8	
+      000169 3E 20            [ 7]  225 	ld	a,#' '
+      00016B CF               [11]  226 	rst	0x08
+      00016C 23               [ 6]  227 	inc	hl
+      00016D 0D               [ 4]  228 	dec	c
+      00016E 20 F5            [12]  229 	jr	nz,sysm_dump2
+                                    230 
+      000170 CD 1D 02         [17]  231 	call	sysm_crlf
+                                    232 
+      000173 2A 81 40         [16]  233 	ld	hl,(SYSM_LASTDM)
+      000176 11 10 00         [10]  234 	ld	de,#16
+      000179 19               [11]  235 	add	hl,de
+      00017A 22 81 40         [16]  236 	ld	(SYSM_LASTDM),hl
+                                    237 	
+      00017D 10 D6            [13]  238 	djnz	sysm_dump1
+                                    239 	
+      00017F C9               [10]  240 	ret
+                                    241 
+                                    242 	;///////////////////////////////////////////////////////////////////////
+      000180                        243 skip_spc:
+      000180 7E               [ 7]  244 	ld	a,(hl)
+      000181 FE 20            [ 7]  245 	cp	#' '
+      000183 C0               [11]  246 	ret	nz
+      000184 23               [ 6]  247 	inc	hl
+      000185 18 F9            [12]  248 	jr	skip_spc
+                                    249 
+                                    250 	;///////////////////////////////////////////////////////////////////////
+      000187                        251 parsehex8:	; Buffer in HL
+                                    252 		; returns result in E and flag NZ if valid, or flag Z if not valid
+      000187 7E               [ 7]  253 	ld	a,(hl)
+      000188 CD CD 01         [17]  254 	call	parsehexdigit
+      00018B C8               [11]  255 	ret	z
+      00018C 5F               [ 4]  256 	ld	e,a
+                                    257 
+      00018D 23               [ 6]  258 	inc	hl
+      00018E 7E               [ 7]  259 	ld	a,(hl)
+      00018F CD CD 01         [17]  260 	call	parsehexdigit
+      000192 28 0B            [12]  261 	jr	z,parsehex8_1
+      000194 23               [ 6]  262 	inc	hl
+      000195 CB 23            [ 8]  263 	sla	e
+      000197 CB 23            [ 8]  264 	sla	e
+      000199 CB 23            [ 8]  265 	sla	e
+      00019B CB 23            [ 8]  266 	sla	e
+      00019D B3               [ 4]  267 	or	e
+      00019E 5F               [ 4]  268 	ld	e,a
+                                    269 
+      00019F                        270 parsehex8_1:
+      00019F AF               [ 4]  271 	xor	a
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 8.
+Hexadecimal [24-Bits]
+
+
+
+      0001A0 FE FF            [ 7]  272 	cp	#0xff
+      0001A2 C9               [10]  273 	ret
+                                    274 
+                                    275 	;///////////////////////////////////////////////////////////////////////
+      0001A3                        276 parsehex16:	; Buffer in HL
+                                    277 		; returns result in DE and flag NZ if valid, or flag Z if not valid
+      0001A3 11 00 00         [10]  278 	ld	de,#0
+      0001A6 7E               [ 7]  279 	ld	a,(hl)
+      0001A7 CD CD 01         [17]  280 	call	parsehexdigit
+      0001AA C8               [11]  281 	ret	z
+      0001AB 5F               [ 4]  282 	ld	e,a
+                                    283 
+      0001AC 06 03            [ 7]  284 	ld	b,#3
+                                    285 
+      0001AE                        286 parsehex16_2:
+      0001AE 23               [ 6]  287 	inc	hl
+      0001AF 7E               [ 7]  288 	ld	a,(hl)
+      0001B0 CD CD 01         [17]  289 	call	parsehexdigit
+      0001B3 28 14            [12]  290 	jr	z,parsehex16_1
+      0001B5 CB 23            [ 8]  291 	sla	e
+      0001B7 CB 12            [ 8]  292 	rl	d
+      0001B9 CB 23            [ 8]  293 	sla	e
+      0001BB CB 12            [ 8]  294 	rl	d
+      0001BD CB 23            [ 8]  295 	sla	e
+      0001BF CB 12            [ 8]  296 	rl	d
+      0001C1 CB 23            [ 8]  297 	sla	e
+      0001C3 CB 12            [ 8]  298 	rl	d
+      0001C5 B3               [ 4]  299 	or	e
+      0001C6 5F               [ 4]  300 	ld	e,a
+      0001C7 10 E5            [13]  301 	djnz	parsehex16_2
+                                    302 
+      0001C9                        303 parsehex16_1:
+      0001C9 AF               [ 4]  304 	xor	a
+      0001CA FE FF            [ 7]  305 	cp	#0xff
+      0001CC C9               [10]  306 	ret
+                                    307 
+                                    308 	;///////////////////////////////////////////////////////////////////////
+      0001CD                        309 parsehexdigit:	; Digit in A
+                                    310 		; returns nibble in A and flag NZ if valid, or flag Z if not valid
+      0001CD FE 30            [ 7]  311 	cp	#'0'
+      0001CF 38 0E            [12]  312 	jr	c,parsehexdigit1
+                                    313 
+      0001D1 FE 3A            [ 7]  314 	cp	#'9'+1
+      0001D3 38 0C            [12]  315 	jr	c,parsehexdigit2
+                                    316 
+      0001D5 CB AF            [ 8]  317 	res	5,a
+      0001D7 FE 47            [ 7]  318 	cp	#'F'+1
+      0001D9 30 04            [12]  319 	jr	nc,parsehexdigit1
+                                    320 
+      0001DB FE 41            [ 7]  321 	cp	#'A'
+      0001DD 30 07            [12]  322 	jr	nc,parsehexdigit3
+                                    323 
+      0001DF                        324 parsehexdigit1:
+      0001DF AF               [ 4]  325 	xor	a
+      0001E0 C9               [10]  326 	ret
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 9.
+Hexadecimal [24-Bits]
+
+
+
+                                    327 
+      0001E1                        328 parsehexdigit2:
+      0001E1 D6 30            [ 7]  329 	sub	#'0'
+      0001E3 FE FF            [ 7]  330 	cp	#0xff
+      0001E5 C9               [10]  331 	ret
+                                    332 
+      0001E6                        333 parsehexdigit3:
+      0001E6 D6 37            [ 7]  334 	sub	#('A' - 10)
+      0001E8 FE FF            [ 7]  335 	cp	#0xff
+      0001EA C9               [10]  336 	ret
+                                    337 
+                                    338 	;///////////////////////////////////////////////////////////////////////
+      0001EB                        339 strcompare:	; STR1 in HL, STR2 in DE
+                                    340 		; Returns Z if equal, NZ and C if STR1<STR2, NZ and NC if STR1>STR2
+      0001EB 1A               [ 7]  341 	ld	a,(de)
+      0001EC 4F               [ 4]  342 	ld	c,a
+      0001ED 7E               [ 7]  343 	ld	a,(hl)
+      0001EE B9               [ 4]  344 	cp	c
+      0001EF 28 01            [12]  345 	jr	z,strcomp1
+      0001F1 C9               [10]  346 	ret	
+                                    347 
+      0001F2                        348 strcomp1:
+      0001F2 B7               [ 4]  349 	or	a
+      0001F3 C8               [11]  350 	ret	z
+                                    351 
+      0001F4 23               [ 6]  352 	inc	hl
+      0001F5 13               [ 6]  353 	inc	de
+      0001F6 18 F3            [12]  354 	jr	strcompare
+                                    355 
+                                    356 	;///////////////////////////////////////////////////////////////////////
+      0001F8                        357 sysm_printh8:	; Value in ACC
+                                    358 
+      0001F8 C5               [11]  359 	push	bc
+      0001F9 47               [ 4]  360 	ld	b,a
+      0001FA CB 3F            [ 8]  361 	srl	a
+      0001FC CB 3F            [ 8]  362 	srl	a
+      0001FE CB 3F            [ 8]  363 	srl	a
+      000200 CB 3F            [ 8]  364 	srl	a
+      000202 FE 0A            [ 7]  365 	cp	#10
+      000204 30 04            [12]  366 	jr	nc,sysm_ph8a
+      000206 C6 30            [ 7]  367 	add	a,#'0'
+      000208 18 02            [12]  368 	jr	sysm_ph8b
+      00020A                        369 sysm_ph8a:
+      00020A C6 37            [ 7]  370 	add	a,#'A'-10
+      00020C                        371 sysm_ph8b:
+      00020C CF               [11]  372 	rst	0x08
+                                    373 
+      00020D 78               [ 4]  374 	ld	a,b
+      00020E E6 0F            [ 7]  375 	and	#0x0f
+      000210 FE 0A            [ 7]  376 	cp	#10
+      000212 30 04            [12]  377 	jr	nc,sysm_ph8c
+      000214 C6 30            [ 7]  378 	add	a,#'0'
+      000216 18 02            [12]  379 	jr	sysm_ph8d
+      000218                        380 sysm_ph8c:
+      000218 C6 37            [ 7]  381 	add	a,#'A'-10
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 10.
+Hexadecimal [24-Bits]
+
+
+
+      00021A                        382 sysm_ph8d:
+      00021A CF               [11]  383 	rst	0x08
+      00021B C1               [10]  384 	pop	bc
+      00021C C9               [10]  385 	ret
+                                    386 
+                                    387 	;///////////////////////////////////////////////////////////////////////
+      00021D                        388 sysm_crlf:
+      00021D 3E 0D            [ 7]  389 	ld	a,#0x0d
+      00021F CF               [11]  390 	rst	0x08
+      000220 3E 0A            [ 7]  391 	ld	a,#0x0a
+      000222 CF               [11]  392 	rst	0x08
+      000223 C9               [10]  393 	ret
+                                    394 
+                                    395 	;///////////////////////////////////////////////////////////////////////
+      000224                        396 sysm_readline:
+                                    397 
+      000224 DF               [11]  398 	rst	0x18
+      000225 28 FD            [12]  399 	jr	z,sysm_readline
+                                    400 
+      000227 D7               [11]  401 	rst	0x10
+      000228 FE 0D            [ 7]  402 	cp	#0x0d
+      00022A 28 1D            [12]  403 	jr	z,sysm_rdl_cr
+      00022C FE 08            [ 7]  404 	cp	#0x08
+      00022E 28 29            [12]  405 	jr	z,sysm_rdl_bs
+                                    406 
+      000230 47               [ 4]  407 	ld	b,a
+      000231 3A 80 40         [13]  408 	ld	a,(SYSM_BUFPTR)
+      000234 FE 80            [ 7]  409 	cp	#SYSM_BUFSZ
+      000236 28 EC            [12]  410 	jr	z,sysm_readline
+                                    411 
+      000238 4F               [ 4]  412 	ld	c,a
+      000239 78               [ 4]  413 	ld	a,b
+      00023A 06 00            [ 7]  414 	ld	b,#0
+      00023C 21 00 40         [10]  415 	ld	hl,#SYSM_BUF
+      00023F 09               [11]  416 	add	hl,bc
+      000240 77               [ 7]  417 	ld	(hl),a
+                                    418 
+      000241 CF               [11]  419 	rst	0x08
+      000242 0C               [ 4]  420 	inc	c
+      000243 79               [ 4]  421 	ld	a,c
+      000244 32 80 40         [13]  422 	ld	(SYSM_BUFPTR),a
+      000247 18 DB            [12]  423 	jr	sysm_readline
+                                    424 
+      000249                        425 sysm_rdl_cr:
+      000249 3A 80 40         [13]  426 	ld	a,(SYSM_BUFPTR)
+      00024C 4F               [ 4]  427 	ld	c,a
+      00024D 06 00            [ 7]  428 	ld	b,#0
+      00024F 21 00 40         [10]  429 	ld	hl,#SYSM_BUF
+      000252 09               [11]  430 	add	hl,bc
+      000253 AF               [ 4]  431 	xor	a
+      000254 77               [ 7]  432 	ld	(hl),a
+      000255 32 80 40         [13]  433 	ld	(SYSM_BUFPTR),a
+      000258 C9               [10]  434 	ret
+                                    435 
+      000259                        436 sysm_rdl_bs:
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 11.
+Hexadecimal [24-Bits]
+
+
+
+                                    437 
+      000259 3A 80 40         [13]  438 	ld	a,(SYSM_BUFPTR)
+      00025C B7               [ 4]  439 	or	a
+      00025D 28 C5            [12]  440 	jr	z,sysm_readline
+      00025F 3D               [ 4]  441 	dec	a
+      000260 32 80 40         [13]  442 	ld	(SYSM_BUFPTR),a
+                                    443 
+      000263 3E 08            [ 7]  444 	ld	a,#8
+      000265 CF               [11]  445 	rst	0x08
+      000266 3E 20            [ 7]  446 	ld	a,#' '
+      000268 CF               [11]  447 	rst	0x08
+      000269 3E 08            [ 7]  448 	ld	a,#8
+      00026B CF               [11]  449 	rst	0x08
+      00026C 18 B6            [12]  450 	jr	sysm_readline
+                                    451 
+                                    452 	;///////////////////////////////////////////////////////////////////////
+      00026E                        453 str_load_xmodem:
+      00026E 0D 0A 53 65 6E 64 20   454 	.ascii '\r\nSend the binary via XMODEM, [ENTER] to abort\r\n'
+             74 68 65 20 62 69 6E
+             61 72 79 20 76 69 61
+             20 58 4D 4F 44 45 4D
+             2C 20 5B 45 4E 54 45
+             52 5D 20 74 6F 20 61
+             62 6F 72 74 0D 0A
+      00029E 00                     455 	.byte 0
+                                    456 
+      00029F                        457 load_xmodem:
+      00029F 21 6E 02         [10]  458 	ld	hl,#str_load_xmodem
+      0002A2 CD 00 00         [17]  459 	call	prints
+      0002A5 16 01            [ 7]  460 	ld	d,#1	;lastseq
+      0002A7 21 00 42         [10]  461 	ld	hl,#RAMTOP
+      0002AA 22 83 40         [16]  462 	ld	(SYSM_LASTED),hl
+      0002AD 01 30 75         [10]  463 	ld	bc,#30000
+                                    464 
+      0002B0                        465 loop_xmodem:
+      0002B0 C5               [11]  466 	push	bc
+      0002B1 0E 02            [ 7]  467 	ld	c,#2	; Test Char
+      0002B3 E7               [11]  468 	rst	0x20
+      0002B4 C1               [10]  469 	pop	bc
+      0002B5 28 65            [12]  470 	jr	z,load_xmodem_nochar
+                                    471 
+      0002B7 CD 2B 03         [17]  472 	call	serial_getchar
+                                    473 
+      0002BA FE 04            [ 7]  474 	cp	#EOT
+      0002BC 20 1E            [12]  475 	jr	nz,load_xmodem1
+                                    476 
+      0002BE 3E 06            [ 7]  477 	ld	a,#ACK
+      0002C0 0E 01            [ 7]  478 	ld	c,#1	; TX Char
+      0002C2 E7               [11]  479 	rst	0x20
+                                    480 
+      0002C3 3A 85 40         [13]  481 	ld	a,(SYSM_FLAGS)
+      0002C6 CB 47            [ 8]  482 	bit	0,a
+      0002C8 C8               [11]  483 	ret	z
+                                    484 
+      0002C9 0E 09            [ 7]  485 	ld	c,#9
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 12.
+Hexadecimal [24-Bits]
+
+
+
+      0002CB E7               [11]  486 	rst	0x20
+      0002CC 0E 0D            [ 7]  487 	ld	c,#13
+      0002CE 21 D5 02         [10]  488 	ld	hl,#msg_run
+      0002D1 E7               [11]  489 	rst	0x20
+      0002D2 C3 00 42         [10]  490 	jp	RAMTOP
+                                    491 
+      0002D5                        492 msg_run:
+      0002D5 52 75 6E 2E 2E 2E 00   493 	.ascii	"Run...\0"
+                                    494 
+      0002DC                        495 load_xmodem1:
+      0002DC FE 1B            [ 7]  496 	cp	#ESC
+      0002DE C8               [11]  497 	ret	z
+      0002DF FE 0D            [ 7]  498 	cp	#CR
+      0002E1 C8               [11]  499 	ret	z
+                                    500 
+      0002E2 FE 01            [ 7]  501 	cp	#SOH
+      0002E4 20 CA            [12]  502 	jr	nz,loop_xmodem
+                                    503 
+      0002E6 CD 2B 03         [17]  504 	call	serial_getchar
+      0002E9 BA               [ 4]  505 	cp	d	;lastseq
+      0002EA 20 C4            [12]  506 	jr	nz,loop_xmodem
+                                    507 
+      0002EC CD 2B 03         [17]  508 	call	serial_getchar
+      0002EF 2F               [ 4]  509 	cpl
+      0002F0 BA               [ 4]  510 	cp	d	;~lastseq
+      0002F1 20 BD            [12]  511 	jr	nz,loop_xmodem
+                                    512 
+      0002F3 06 80            [ 7]  513 	ld	b,#128
+      0002F5 0E 00            [ 7]  514 	ld	c,#0	;chksum
+      0002F7 2A 83 40         [16]  515 	ld	hl,(SYSM_LASTED)
+                                    516 
+      0002FA                        517 loop_xmodem2:
+      0002FA CD 2B 03         [17]  518 	call	serial_getchar
+      0002FD 5F               [ 4]  519 	ld	e,a
+      0002FE 81               [ 4]  520 	add	a,c
+      0002FF 4F               [ 4]  521 	ld	c,a
+      000300 73               [ 7]  522 	ld	(hl),e
+      000301 23               [ 6]  523 	inc	hl
+      000302 10 F6            [13]  524 	djnz	loop_xmodem2
+                                    525 
+      000304 22 83 40         [16]  526 	ld	(SYSM_LASTED),hl
+      000307 CD 2B 03         [17]  527 	call	serial_getchar
+      00030A B9               [ 4]  528 	cp	c
+      00030B 20 08            [12]  529 	jr	nz,load_xm_ckerr	
+                                    530 
+      00030D 14               [ 4]  531 	inc	d
+      00030E 3E 06            [ 7]  532 	ld	a,#ACK
+      000310 0E 01            [ 7]  533 	ld	c,#1	; TX Char
+      000312 E7               [11]  534 	rst	0x20
+      000313 18 11            [12]  535 	jr	endloop_xmodem
+                                    536 
+      000315                        537 load_xm_ckerr:
+      000315 3E 15            [ 7]  538 	ld	a,#NAK
+      000317 0E 01            [ 7]  539 	ld	c,#1	; TX Char
+      000319 E7               [11]  540 	rst	0x20
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 13.
+Hexadecimal [24-Bits]
+
+
+
+      00031A 18 0A            [12]  541 	jr	endloop_xmodem	
+                                    542 
+      00031C                        543 load_xmodem_nochar:
+      00031C 0B               [ 6]  544 	dec	bc
+      00031D 78               [ 4]  545 	ld	a,b
+      00031E B1               [ 4]  546 	or	c
+      00031F 20 8F            [12]  547 	jr	nz,loop_xmodem
+                                    548 
+      000321 3E 15            [ 7]  549 	ld	a,#NAK
+      000323 0E 01            [ 7]  550 	ld	c,#1	; TX Char
+      000325 E7               [11]  551 	rst	0x20
+                                    552 
+      000326                        553 endloop_xmodem:
+      000326 01 30 75         [10]  554 	ld	bc,#30000
+      000329 18 85            [12]  555 	jr	loop_xmodem
+                                    556 
+      00032B                        557 serial_getchar:
+      00032B C5               [11]  558 	push	bc
+                                    559 
+      00032C                        560 serial_getchar1:
+      00032C 0E 03            [ 7]  561 	ld	c,#3
+      00032E E7               [11]  562 	rst	0x20
+      00032F 28 FB            [12]  563 	jr	z,serial_getchar1
+                                    564 
+      000331 C1               [10]  565 	pop	bc
+      000332 C9               [10]  566 	ret
+                                    567 
+                                    568 	;///////////////////////////////////////////////////////////////////////
+                                    569 	;//////////////////////////   SYSMON END   /////////////////////////////
+                                    570 	;///////////////////////////////////////////////////////////////////////
+                                    571 

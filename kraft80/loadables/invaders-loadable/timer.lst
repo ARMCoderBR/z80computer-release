@@ -1,0 +1,110 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+
+
+                                      1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                      2 ;
+                                      3 ;  INVADERS FOR KRAFT 80
+                                      4 ;  A mini game inspired on Taito's Space Invaders
+                                      5 ;  Rev 1.0
+                                      6 ;  14-Oct-2025 - ARMCoder
+                                      7 ;  Timer module
+                                      8 ;
+                                      9 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                     10 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+
+
+                                     11 		.include "defines.h"
+                                      1 ;
+                                      2 ; KRAFT80 Defines
+                                      3 ;
+                                      4 
+                           004102     5 isr1vector	.equ	0x4102	;STACKTOP+2
+                           004104     6 isr2vector	.equ	0x4104	;STACKTOP+4
+                                      7 
+                           000000     8 PORTBUTTONS	.equ	0x00	
+                           000050     9 PORTDATA	.equ	0x50
+                           000051    10 PORTADDRL	.equ	0x51
+                           000052    11 PORTADDRH	.equ	0x52
+                           000053    12 PORTMODE	.equ	0x53
+                                     13 
+                                     14 ;   PS2 KEYBOARD
+                           000055    15 PORTKEY		.equ	0x55
+                                     16 
+                                     17 ;
+                                     18 ; Game Defines
+                                     19 ;
+                                     20 
+                           00000B    21 INVADER_COLS	.equ	11
+                           000005    22 INVADER_ROWS	.equ	5
+                           000037    23 INVADER_NUM	.equ	(INVADER_COLS*INVADER_ROWS)	
+                           000008    24 INVADERS_VSPACING .equ	8
+                                     25 
+                           0000E0    26 PLAYFIELD_WIDTH	.equ	224
+                                     27 
+                           000070    28 PLAY_WIDTH_BYTES .equ	(PLAYFIELD_WIDTH/2)
+                           00000C    29 VSTEP		.equ	12
+                           000008    30 VSTEP2		.equ	INVADERS_VSPACING
+                                     31 
+                           0000A0    32 BYTES_PER_LINE	.equ	160
+                                     33 
+                           000018    34 LEFT_OFFSET_BYTES .equ	(BYTES_PER_LINE - PLAY_WIDTH_BYTES)/2
+                                     35 
+                                     36 
+                           0000DC    37 CANNON_VPOS	.equ	220
+                           008998    38 CANNON_SCR_OFS	.equ	(BYTES_PER_LINE*CANNON_VPOS+LEFT_OFFSET_BYTES)
+                           008FD8    39 BLINE_SCR_OFS	.equ	(BYTES_PER_LINE*(10+CANNON_VPOS)+LEFT_OFFSET_BYTES)
+                                     40 
+                           007AA8    41 BUNKER1_SCR_OFS	.equ	(BYTES_PER_LINE*(CANNON_VPOS-24)+16+LEFT_OFFSET_BYTES)
+                           007ABF    42 BUNKER2_SCR_OFS	.equ	(BUNKER1_SCR_OFS+23)
+                           007AD6    43 BUNKER3_SCR_OFS	.equ	(BUNKER2_SCR_OFS+23)
+                           007AED    44 BUNKER4_SCR_OFS	.equ	(BUNKER3_SCR_OFS+23)
+                                     45 
+                           000226    46 INV_DIVIDER_INI	 .equ	550
+                           00000A    47 INV_DIVIDER_DROP .equ	10
+                                     48 
+                           000008    49 NUM_BOMBS	.equ	8
+                                     50 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 3.
+Hexadecimal [24-Bits]
+
+
+
+                                     12 
+                                     13 		.globl	init_timer
+                                     14 		
+                                     15 		.area	CODE
+                                     16 
+                                     17 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                     18 
+      000000                         19 init_timer:
+      000000 F3               [ 4]   20 		di
+      000001 22 00 00         [16]   21 		ld	(timer_srvector),hl
+      000004 2A 04 41         [16]   22 		ld	hl,(isr2vector)
+      000007 22 02 00         [16]   23 		ld	(isr2vector_copy),hl
+      00000A 21 12 00         [10]   24 		ld	hl,#timer_isr
+      00000D 22 04 41         [16]   25 		ld	(isr2vector),hl
+      000010 FB               [ 4]   26 		ei
+      000011 C9               [10]   27 		ret
+                                     28 		
+                                     29 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                     30 
+      000012 21 1A 00         [10]   31 timer_isr:	ld	hl,#timer_isr2
+      000015 E5               [11]   32 		push	hl
+      000016 2A 00 00         [16]   33 		ld	hl,(timer_srvector)
+      000019 E9               [ 4]   34 		jp	(hl)
+                                     35 
+      00001A                         36 timer_isr2:
+      00001A 2A 02 00         [16]   37 		ld	hl,(isr2vector_copy)
+      00001D E9               [ 4]   38 		jp	(hl)
+                                     39 
+                                     40 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+                                     41 		.area _DATA
+                                     42 
+      000000                         43 timer_srvector:	.ds	2	; User service
+      000002                         44 isr2vector_copy:.ds	2	; Timer
+                                     45 

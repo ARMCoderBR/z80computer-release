@@ -3,77 +3,28 @@
 ;  INVADERS FOR KRAFT 80
 ;  A mini game inspired on Taito's Space Invaders
 ;  Rev 1.0
-;  04-Jul-2025 - ARMCoder
-;  
+;  14-Oct-2025 - ARMCoder
+;  Main module
+;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-PORTBUTTONS	.equ	0x00	
-PORTDATA	.equ	0x50
-PORTADDRL	.equ	0x51
-PORTADDRH	.equ	0x52
-PORTMODE	.equ	0x53
+		.include "defines.h"
 
+		.area	CODE
 
-INVADER_COLS	.equ	11
-INVADER_ROWS	.equ	5
-INVADER_NUM	.equ	(INVADER_COLS*INVADER_ROWS)	
-INVADERS_VSPACING .equ	8
-
-PLAYFIELD_WIDTH	.equ	224
-
-PLAY_WIDTH_BYTES .equ	(PLAYFIELD_WIDTH/2)
-VSTEP		.equ	12
-VSTEP2		.equ	INVADERS_VSPACING
-
-
-BYTES_PER_LINE	.equ	160
-
-LEFT_OFFSET_BYTES .equ	(BYTES_PER_LINE - PLAY_WIDTH_BYTES)/2
-
-
-CANNON_VPOS	.equ	220
-CANNON_SCR_OFS	.equ	(BYTES_PER_LINE*CANNON_VPOS+LEFT_OFFSET_BYTES)
-BLINE_SCR_OFS	.equ	(BYTES_PER_LINE*(10+CANNON_VPOS)+LEFT_OFFSET_BYTES)
-
-BUNKER1_SCR_OFS	.equ	(BYTES_PER_LINE*(CANNON_VPOS-24)+16+LEFT_OFFSET_BYTES)
-BUNKER2_SCR_OFS	.equ	(BUNKER1_SCR_OFS+23)
-BUNKER3_SCR_OFS	.equ	(BUNKER2_SCR_OFS+23)
-BUNKER4_SCR_OFS	.equ	(BUNKER3_SCR_OFS+23)
-
-INV_DIVIDER_INI	 .equ	550
-INV_DIVIDER_DROP .equ	10
-
-NUM_BOMBS	.equ	8
-
-USE_KRAFTMON	.equ	0
-
-		.area	_HEADER (ABS)
-
-		.if	USE_KRAFTMON == 1
-
-isr2vector	.equ	0xff04	;STACKTOP+4
-
-		.org 0x2100
-
-		.else
-
-isr2vector	.equ	0x4104	;STACKTOP+4
-
-		.org 0x4200
-
-		.endif
+		.globl	invader_matrix, col_start, col_end, row_end
+		.globl	cannon_hpos_px
+		.globl	cannondie_state
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
 
-invaders:	ld	a,#1
-		out	(PORTMODE),a
+invaders:
+		call	set_screen
 
-		ld	hl,(isr2vector)
-		ld	(isr2vector_copy),hl
-		di
-		ld	hl,#timer_isr
-		ld	(isr2vector),hl
-		ei
+		ld	hl,#timer_service
+		call	init_timer
+
+		call	init_inputs
 
 		ld	hl,#150
 		ld	(timer_invaders),hl
@@ -83,25 +34,24 @@ wait_init:	ld	hl,(timer_invaders)
 		jr	nz,wait_init
 
 		call	clrscr
-		
-		ld	hl,#BLINE_SCR_OFS
-		ld	a,l
-		out	(PORTADDRL),a
-		ld	a,h
-		out	(PORTADDRH),a
-		ld	b,#PLAY_WIDTH_BYTES
-		ld	a,#0xcc		;lightred
-bline:		out	(PORTDATA),a
-		djnz	bline
-		
-		call	init_vars1
-		
-		call	init_vars2
-		call	print_cannon
+		call	drawbaseline
 
+		call	init_vars1
+		call	init_vars2
+
+		call	print_cannon
 		call	print_invaders
 
-loop_invaders:	call	move_cannon
+		ld	hl,#0
+		ld	(score),hl
+
+		call	print_score
+
+loop_invaders:
+		call	update_inputs
+		ld	(inputs_state),a
+
+		call	move_cannon
 		call	move_invaders
 		call	move_missile
 		call	newbomb
@@ -111,7 +61,8 @@ loop_invaders:	call	move_cannon
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
 
-init_vars1:	ld	a,#(PLAYFIELD_WIDTH/2) - 8
+init_vars1:
+		ld	a,#(PLAYFIELD_WIDTH/2) - 8
 		ld	(cannon_hpos_px),a
 
 		xor	a
@@ -131,9 +82,11 @@ init_vars1a:	ld	_BOMB_ACT(ix),a
 		ld	(lfsr_data),hl
 
 		ret
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
 
-init_vars2:	call	print_bunkers
+init_vars2:
+		call	print_bunkers
 
 		ld	hl,#invader_matrix
 		ld	a,#1
@@ -149,7 +102,8 @@ init_var1:	ld	(hl),a
 		ld	(col_start),a
 		ld	(stepping),a
 		ld	(hdir_invaders),a
-		
+		ld	(refsh_cannon),a
+
 		ld	a,#INVADER_COLS-1
 		ld	(col_end),a
 		ld	a,#INVADER_ROWS-1
@@ -166,6 +120,7 @@ init_var1:	ld	(hl),a
 
 		ld	hl,#0
 		ld	(timer_invaders),hl
+		ld	(cannondie_state),hl
 
 		call	update_scrpos
 
@@ -210,7 +165,23 @@ invr_nf:	ld	a,d
 		djnz	scan_invrows
 		ret
 
-invr_foundrow:	ld	b,#INVADER_COLS
+invr_foundrow:	ld	a,#30
+		ld	(scrinc),a
+		ld	a,b	; Check the row for scoring (top row:30 pts  mid rows:20 pts  lower rows: 10 pts)
+		cp	#INVADER_ROWS
+		jr	z,invr_foundrow2
+		ld	a,#20
+		ld	(scrinc),a
+		ld	a,b
+		cp	#INVADER_ROWS-1
+		jr	z,invr_foundrow2
+		cp	#INVADER_ROWS-2
+		jr	z,invr_foundrow2
+		ld	a,#10
+		ld	(scrinc),a
+		
+invr_foundrow2:
+		ld	b,#INVADER_COLS
 
 		ld	a,(col_invaders_px)
 		ld	d,a
@@ -242,6 +213,14 @@ invr_foundcol:	ld	a,(hl)
 		ret	z
 
 		ld	(hl),#0
+
+		ld	hl,(score)
+		ld	a,(scrinc)
+		ld	e,a
+		ld	d,#0
+		add	hl,de
+		ld	(score),hl
+		call	print_score
 
 		call	print_invaders
 
@@ -510,19 +489,37 @@ revdir:		ld	a,(hdir_invaders)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
 
-move_cannon:	ld	a,(timer_cannon)
+move_cannon:
+		ld	a,(timer_cannon)
 		or	a
 		ret	nz
 		
 		ld	a,#4
 		ld	(timer_cannon),a
-		
-		in	a,(PORTBUTTONS)
-		ld	c,a
-		bit	0,a
-		jr	z,newmis1
 
-		ld	a,(missile_act)
+		ld	hl,(cannondie_state)
+		ld	a,h
+		or	l
+		jr	z,movecan00
+		ld	a,#1
+		ld	(refsh_cannon),a
+		jp	print_cannon_die
+
+movecan00:
+		ld	a,(refsh_cannon)
+		or	a
+		jr	z,movecan001
+		call	print_cannon
+		xor	a
+		ld	(refsh_cannon),a
+
+movecan001:
+		ld	a,(inputs_state)
+		ld	c,a
+		bit	0,a			;FIRE
+		jr	nz,newmis1		;Pressed
+
+		ld	a,(missile_act)		;Not pressed
 		cp	#2
 		ld	a,c
 		jr	nz,movec0
@@ -565,10 +562,10 @@ newmis2:	ld	d,a
 		ld	(missile_scrpos),hl
 		ld	a,c
 		
-movec0:		bit	5,a
-		jr	nz,movec1
-		bit	7,a
-		ret	z
+movec0:		bit	5,a			;LEFT
+		jr	z,movec1		;Not pressed
+		bit	7,a			;RIGHT pressed
+		ret	nz
 		
 		ld	a,(cannon_hpos_px)	;decrement
 		or	a
@@ -578,8 +575,8 @@ movec0:		bit	5,a
 		ld	(cannon_hpos_px),a
 		jp	print_cannon
 		
-movec1:		bit	7,a
-		ret	nz
+movec1:		bit	7,a			;RIGHT
+		ret	z			;NOT PRESSED
 
 		ld	a,(cannon_hpos_px)
 		cp	#(PLAYFIELD_WIDTH - 16)
@@ -590,624 +587,7 @@ movec1:		bit	7,a
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
 
-clear_lines:	ld	hl,(scrpos_invaders)
-
-		ld	a,(row_end)
-		inc	a
-		ld	b,a
-		ld	c,#VSTEP
-cleanln00:	push	hl
-		push	bc
-
-		ld	b,c
-		ld	de,#BYTES_PER_LINE
-
-clearln0:	push	bc
-		xor	a
-		sbc	hl,de
-
-		;;;;;;;;;;;;;;;;;;;;; 1 pixel line
-
-		ld	a,l
-		out	(PORTADDRL),a
-		ld	a,h
-		out	(PORTADDRH),a
-
-		ld	a,(col_start)
-		ld	b,a
-		ld	a,(col_end)
-		sub	b
-		inc	a
-		add	a,a
-		add	a,a
-		add	a,a
-		ld	b,a
-		
-		xor	a	;ld	a,#0x44
-clearln1:	out	(PORTDATA),a
-		djnz	clearln1
-		pop	bc
-		
-		djnz	clearln0
-
-		pop	bc
-		pop	hl
-		ld	de,#BYTES_PER_LINE*(8+INVADERS_VSPACING)
-		add	hl,de
-		ld	c,#VSTEP2
-		djnz	cleanln00
-		ret
-		
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
-
-print_invaders:	ld	hl,(scrpos_invaders)
-		ld	(spritepos),hl
-
-		ld	hl,#invader_matrix
-		ld	a,(col_start)
-		ld	e,a
-		ld	d,#0
-		add	hl,de
-		ld	(invader_matnow),hl
-		ld	(invader_matnow2),hl
-		
-		xor	a		; Row
-
-print_inv1:	ld	(row_now),a
-
-		ld	hl,(spritepos)
-		ld	(spritenow),hl
-		
-		ld	a,(col_start)
-		;ld	b,a
-		;ld	c,#0
-		;add	hl,bc
-
-print_inv1a:	ld	(col_now),a	; Invader row
-		;ld	a,(hl)
-		
-		ld	hl,(invader_matnow2)
-		ld	a,(hl)
-		inc	hl
-		ld	(invader_matnow2),hl
-		or	a
-		jr	z,blk		; No invader here, blank
-		
-		ld	a,(row_now)	; Invader type here
-		add	a,a
-		ld	b,a
-		ld	a,(stepping)
-		add	a,b
-		or	a
-		jr	z,sq1a
-		dec	a
-		jr	z,sq1b
-		dec	a
-		jr	z,cr1a
-		dec	a
-		jr	z,cr1b
-		dec	a
-		jr	z,cr2a
-		dec	a
-		jr	z,cr2b
-		dec	a
-		jr	z,oc1a
-		dec	a
-		jr	z,oc1b
-		dec	a
-		jr	z,oc2a
-		dec	a
-		jr	z,oc2b
-		
-blk:		ld	bc,#blank		
-		jr	sprok
-sq1a:		ld	bc,#squid1a
-		jr	sprok
-sq1b:		ld	bc,#squid1b
-		jr	sprok
-cr1a:		ld	bc,#crab1a
-		jr	sprok
-cr1b:		ld	bc,#crab1b
-		jr	sprok
-cr2a:		ld	bc,#crab2a
-		jr	sprok
-cr2b:		ld	bc,#crab2b
-		jr	sprok
-oc1a:		ld	bc,#octo1a
-		jr	sprok
-		
-sprok:		ld	hl,(spritenow)
-		push	hl
-		call	print_sprite
-		pop	hl
-		ld	de,#8
-		add	hl,de
-		ld	(spritenow),hl
-		
-		ld	a,(col_now)
-		ld	b,a
-		ld	a,(col_end)
-		cp	b
-		jr	z,print_inv2
-
-		inc	b
-		ld	a,b
-		jr	print_inv1a	; End invader row
-
-oc1b:		ld	bc,#octo1b
-		jr	sprok
-oc2a:		ld	bc,#octo2a
-		jr	sprok
-oc2b:		ld	bc,#octo2b
-		jr	sprok
-		
-print_inv2:	ld	hl,(spritepos)
-		ld	de,#BYTES_PER_LINE*(8+INVADERS_VSPACING)
-		add	hl,de
-		ld	(spritepos),hl
-
-		ld	hl,(invader_matnow)
-		ld	de,#INVADER_COLS
-		add	hl,de
-		ld	(invader_matnow),hl
-		ld	(invader_matnow2),hl
-
-		ld	a,(row_now)
-		ld	b,a
-		ld	a,(row_end)
-		cp	b
-		ret	z
-		inc	b
-		ld	a,b
-
-	;	push	af
-	;	call	move_cannon
-	;	pop	af
-
-		jp	print_inv1
-		
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
-
-print_sprite:	ld	d,b		; bc = sprite  hl = scrpos
-		ld	e,c
-		ld	c,#8
-printlb1:	ld	a,l
-		out	(PORTADDRL),a
-		ld	a,h
-		out	(PORTADDRH),a
-
-		ld	b,#8
-printlb2:	ld	a,(de)
-		out	(PORTDATA),a
-		inc	de
-		djnz	printlb2		
-
-		ld	a,l
-		add	a,#BYTES_PER_LINE
-		ld	l,a
-		jr	nc,printlb3
-		inc	h
-
-printlb3:	dec	c
-		jr	nz,printlb1
-
-		ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
-
-print_cannon:	ld	bc,#cannon1
-		ld	a,(cannon_hpos_px)
-		bit	0,a
-		jr	z,baseis1
-		ld	bc,#cannon2
-baseis1:	ld	hl,#CANNON_SCR_OFS
-		srl	a
-		ld	e,a
-		ld	d,#0
-		add	hl,de		; hl = screen mem pos
-		jp	print_sprite
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
-
-clrscr:		xor	a
-		out	(PORTADDRL),a
-		out	(PORTADDRH),a
-		ld	c,#240
-clrscr1:	ld	b,#BYTES_PER_LINE
-clrscr2:	out	(PORTDATA),a
-		djnz	clrscr2
-		dec	c
-		jr	nz,clrscr1
-		ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
-;;
-;; CGA Colors
-;; 0 BLACK      8 DARKGRAY
-;; 1 BLUE       9 LIGHTBLUE
-;; 2 GREEN     10 LIGHTGREEN
-;; 3 CYAN      11 LIGHTCYAN
-;; 4 RED       12 LIGHTRED
-;; 5 MAGENTA   13 LIGHTMAGENTA
-;; 6 BROWN     14 YELLOW
-;; 7 GRAY      15 WHITE
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
-
-print_bunkers:	ld	hl,#BUNKER1_SCR_OFS
-		call	print_bunker
-		ld	hl,#BUNKER2_SCR_OFS
-		call	print_bunker
-		ld	hl,#BUNKER3_SCR_OFS
-		call	print_bunker
-		ld	hl,#BUNKER4_SCR_OFS
-		call	print_bunker
-		ret
-		
-print_bunker:	; HL = screen position
-		
-		; Row 1
-		ld	a,l
-		out	(PORTADDRL),a
-		ld	a,h
-		out	(PORTADDRH),a
-		xor	a
-		out	(PORTDATA),a
-		out	(PORTDATA),a
-		ld	b,#7
-		call	print_bunkline
-
-		ld	de,#BYTES_PER_LINE
-
-		; Row 2
-		add	hl,de
-		ld	a,l
-		out	(PORTADDRL),a
-		ld	a,h
-		out	(PORTADDRH),a
-		xor	a
-		out	(PORTDATA),a
-		ld	a,#0x0c
-		out	(PORTDATA),a
-		ld	b,#7
-		call	print_bunkline
-		ld	a,#0xc0
-		out	(PORTDATA),a
-
-		; Row 3
-		add	hl,de
-		ld	a,l
-		out	(PORTADDRL),a
-		ld	a,h
-		out	(PORTADDRH),a
-		xor	a
-		out	(PORTDATA),a
-		ld	b,#9
-		call	print_bunkline
-
-		; Row 4
-		add	hl,de
-		ld	a,l
-		out	(PORTADDRL),a
-		ld	a,h
-		out	(PORTADDRH),a
-		ld	a,#0x0c
-		out	(PORTDATA),a
-		ld	b,#9
-		call	print_bunkline
-		ld	a,#0xc0
-		out	(PORTDATA),a
-
-		; Rows 5-12
-		ld	b,#8
-pbunk5:		push	bc
-		add	hl,de
-		ld	a,l
-		out	(PORTADDRL),a
-		ld	a,h
-		out	(PORTADDRH),a
-		ld	b,#11
-		call	print_bunkline
-		pop	bc
-		djnz	pbunk5
-
-		; Row 13
-		add	hl,de
-		ld	a,l
-		out	(PORTADDRL),a
-		ld	a,h
-		out	(PORTADDRH),a
-		ld	b,#4
-		call	print_bunkline
-		xor	a
-		out	(PORTDATA),a
-		out	(PORTDATA),a
-		out	(PORTDATA),a
-		ld	b,#4
-		call	print_bunkline
-
-		; Row 14
-		add	hl,de
-		ld	a,l
-		out	(PORTADDRL),a
-		ld	a,h
-		out	(PORTADDRH),a
-		ld	b,#3
-		call	print_bunkline
-		ld	a,#0xc0
-		out	(PORTDATA),a
-		xor	a
-		out	(PORTDATA),a
-		out	(PORTDATA),a
-		out	(PORTDATA),a
-		ld	a,#0x0c
-		out	(PORTDATA),a
-		ld	b,#3
-		call	print_bunkline
-
-		; Rows 15-16
-		ld	b,#2
-pbunk15:	push	bc
-		add	hl,de
-		ld	a,l
-		out	(PORTADDRL),a
-		ld	a,h
-		out	(PORTADDRH),a
-		ld	b,#3
-		call	print_bunkline
-		xor	a
-		out	(PORTDATA),a
-		out	(PORTDATA),a
-		out	(PORTDATA),a
-		out	(PORTDATA),a
-		out	(PORTDATA),a
-		ld	b,#3
-		call	print_bunkline
-		pop	bc
-		djnz	pbunk15
-		
-		ret
-
-print_bunkline:	ld	a,#0xcc
-
-pbunkl:		out	(PORTDATA),a
-		djnz	pbunkl
-		ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BLANK (NO COLOR) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ........ ........
-;; ........ ........
-;; ........ ........
-;; ........ ........
-;; ........ ........
-;; ........ ........
-;; ........ ........
-;; ........ ........
-blank:		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
-		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
-		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
-		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
-		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
-		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
-		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
-		.byte	0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00
-				
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SQUID1 (LIGHTGREEN) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; .......# #.......
-;; ......## ##......
-;; .....### ###.....
-;; ....##.# #.##....
-;; ....#### ####....
-;; ......#. .#......
-;; .....#.# #.#.....
-;; ....#.#. .#.#....
-squid1a:	.byte	0x00,0x00,0x00,0x0a, 0xa0,0x00,0x00,0x00
-		.byte	0x00,0x00,0x00,0xaa, 0xaa,0x00,0x00,0x00
-		.byte	0x00,0x00,0x0a,0xaa, 0xaa,0xa0,0x00,0x00
-		.byte	0x00,0x00,0xaa,0x0a, 0xa0,0xaa,0x00,0x00
-		.byte	0x00,0x00,0xaa,0xaa, 0xaa,0xaa,0x00,0x00
-		.byte	0x00,0x00,0x00,0xa0, 0x0a,0x00,0x00,0x00
-		.byte	0x00,0x00,0x0a,0x0a, 0xa0,0xa0,0x00,0x00
-		.byte	0x00,0x00,0xa0,0xa0, 0x0a,0x0a,0x00,0x00
-
-;; .......# #.......
-;; ......## ##......
-;; .....### ###.....
-;; ....##.# #.##....
-;; ....#### ####....
-;; .....#.# #.#.....
-;; ....#... ...#....
-;; .....#.. ..#.....
-squid1b:	.byte	0x00,0x00,0x00,0x0a, 0xa0,0x00,0x00,0x00
-		.byte	0x00,0x00,0x00,0xaa, 0xaa,0x00,0x00,0x00
-		.byte	0x00,0x00,0x0a,0xaa, 0xaa,0xa0,0x00,0x00
-		.byte	0x00,0x00,0xaa,0x0a, 0xa0,0xaa,0x00,0x00
-		.byte	0x00,0x00,0xaa,0xaa, 0xaa,0xaa,0x00,0x00
-		.byte	0x00,0x00,0x0a,0x0a, 0xa0,0xa0,0x00,0x00
-		.byte	0x00,0x00,0xa0,0x00, 0x00,0x0a,0x00,0x00
-		.byte	0x00,0x00,0x0a,0x00, 0x00,0xa0,0x00,0x00
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CRAB1 (LIGHTGREEN) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ....#... ..#.....
-;; ..#..#.. .#..#...
-;; ..#.#### ###.#...
-;; ..###.## #.###...
-;; ..###### #####...
-;; ...##### ####....
-;; ....#... ..#.....
-;; ...#.... ...#....
-crab1a:		.byte	0x00,0x00,0xa0,0x00, 0x00,0xa0,0x00,0x00
-		.byte	0x00,0xa0,0x0a,0x00, 0x0a,0x00,0xa0,0x00
-		.byte	0x00,0xa0,0xaa,0xaa, 0xaa,0xa0,0xa0,0x00
-		.byte	0x00,0xaa,0xa0,0xaa, 0xa0,0xaa,0xa0,0x00
-		.byte	0x00,0xaa,0xaa,0xaa, 0xaa,0xaa,0xa0,0x00
-		.byte	0x00,0x0a,0xaa,0xaa, 0xaa,0xaa,0x00,0x00
-		.byte	0x00,0x00,0xa0,0x00, 0x00,0xa0,0x00,0x00
-		.byte	0x00,0x0a,0x00,0x00, 0x00,0x0a,0x00,0x00
-		
-;; ....#... ..#.....
-;; .....#.. .#......
-;; ....#### ### ....
-;; ...##.## #.##....
-;; ..###### #####...
-;; ..#.#### ###.#...
-;; ..#.#... ..#.#...
-;; .....##. ##......
-crab1b:		.byte	0x00,0x00,0xa0,0x00, 0x00,0xa0,0x00,0x00
-		.byte	0x00,0x00,0x0a,0x00, 0x0a,0x00,0x00,0x00
-		.byte	0x00,0x00,0xaa,0xaa, 0xaa,0xa0,0x00,0x00
-		.byte	0x00,0x0a,0xa0,0xaa, 0xa0,0xaa,0x00,0x00
-		.byte	0x00,0xaa,0xaa,0xaa, 0xaa,0xaa,0xa0,0x00
-		.byte	0x00,0xa0,0xaa,0xaa, 0xaa,0xa0,0xa0,0x00
-		.byte	0x00,0xa0,0xa0,0x00, 0x00,0xa0,0xa0,0x00
-		.byte	0x00,0x00,0x0a,0xa0, 0xaa,0x00,0x00,0x00	
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CRAB2 (LIGHTCYAN) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ....#... ..#.....
-;; ..#..#.. .#..#...
-;; ..#.#### ###.#...
-;; ..###.## #.###...
-;; ..###### #####...
-;; ...##### ####....
-;; ....#... ..#.....
-;; ...#.... ...#....
-crab2a:		.byte	0x00,0x00,0xb0,0x00, 0x00,0xb0,0x00,0x00
-		.byte	0x00,0xb0,0x0b,0x00, 0x0b,0x00,0xb0,0x00
-		.byte	0x00,0xb0,0xbb,0xbb, 0xbb,0xb0,0xb0,0x00
-		.byte	0x00,0xbb,0xb0,0xbb, 0xb0,0xbb,0xb0,0x00
-		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xb0,0x00
-		.byte	0x00,0x0b,0xbb,0xbb, 0xbb,0xbb,0x00,0x00
-		.byte	0x00,0x00,0xb0,0x00, 0x00,0xb0,0x00,0x00
-		.byte	0x00,0x0b,0x00,0x00, 0x00,0x0b,0x00,0x00
-		
-;; ....#... ..#.....
-;; .....#.. .#......
-;; ....#### ### ....
-;; ...##.## #.##....
-;; ..###### #####...
-;; ..#.#### ###.#...
-;; ..#.#... ..#.#...
-;; .....##. ##......
-crab2b:		.byte	0x00,0x00,0xb0,0x00, 0x00,0xb0,0x00,0x00
-		.byte	0x00,0x00,0x0b,0x00, 0x0b,0x00,0x00,0x00
-		.byte	0x00,0x00,0xbb,0xbb, 0xbb,0xb0,0x00,0x00
-		.byte	0x00,0x0b,0xb0,0xbb, 0xb0,0xbb,0x00,0x00
-		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xb0,0x00
-		.byte	0x00,0xb0,0xbb,0xbb, 0xbb,0xb0,0xb0,0x00
-		.byte	0x00,0xb0,0xb0,0x00, 0x00,0xb0,0xb0,0x00
-		.byte	0x00,0x00,0x0b,0xb0, 0xbb,0x00,0x00,0x00	
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; OCTO1 (LIGHTCYAN) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ......## ##......
-;; ...##### #####...
-;; ..###### ######..
-;; ..###..# #..###..
-;; ..###### ######..
-;; .....##. .##.....
-;; ....##.# #.##....
-;; ..##.... ....##..
-octo1a:		.byte	0x00,0x00,0x00,0xbb, 0xbb,0x00,0x00,0x00
-		.byte	0x00,0x0b,0xbb,0xbb, 0xbb,0xbb,0xb0,0x00
-		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
-		.byte	0x00,0xbb,0xb0,0x0b, 0xb0,0x0b,0xbb,0x00
-		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
-		.byte	0x00,0x00,0x0b,0xb0, 0x0b,0xb0,0x00,0x00
-		.byte	0x00,0x00,0xbb,0x0b, 0xb0,0xbb,0x00,0x00
-		.byte	0x00,0xbb,0x00,0x00, 0x00,0x00,0xbb,0x00
-
-;; ......## ##......
-;; ...##### #####...
-;; ..###### ######..
-;; ..###..# #..###..
-;; ..###### ######..
-;; ....###. .###....
-;; ...##..# #..##...
-;; ....##.. ..##....
-octo1b:		.byte	0x00,0x00,0x00,0xbb, 0xbb,0x00,0x00,0x00
-		.byte	0x00,0x0b,0xbb,0xbb, 0xbb,0xbb,0xb0,0x00
-		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
-		.byte	0x00,0xbb,0xb0,0x0b, 0xb0,0x0b,0xbb,0x00
-		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
-		.byte	0x00,0x00,0xbb,0xb0, 0x0b,0xbb,0x00,0x00
-		.byte	0x00,0x0b,0xb0,0x0b, 0xb0,0x0b,0xb0,0x00
-		.byte	0x00,0x00,0xbb,0x00, 0x00,0xbb,0x00,0x00
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;; OCTO2 (LIGHTMAGENTA) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ......## ##......
-;; ...##### #####...
-;; ..###### ######..
-;; ..###..# #..###..
-;; ..###### ######..
-;; .....##. .##.....
-;; ....##.# #.##....
-;; ..##.... ....##..
-octo2a:		.byte	0x00,0x00,0x00,0xdd, 0xdd,0x00,0x00,0x00
-		.byte	0x00,0x0d,0xdd,0xdd, 0xdd,0xdd,0xd0,0x00
-		.byte	0x00,0xdd,0xdd,0xdd, 0xdd,0xdd,0xdd,0x00
-		.byte	0x00,0xdd,0xd0,0x0d, 0xd0,0x0d,0xdd,0x00
-		.byte	0x00,0xdd,0xdd,0xdd, 0xdd,0xdd,0xdd,0x00
-		.byte	0x00,0x00,0x0d,0xd0, 0x0d,0xd0,0x00,0x00
-		.byte	0x00,0x00,0xdd,0x0d, 0xd0,0xdd,0x00,0x00
-		.byte	0x00,0xdd,0x00,0x00, 0x00,0x00,0xdd,0x00
-
-;; ......## ##......
-;; ...##### #####...
-;; ..###### ######..
-;; ..###..# #..###..
-;; ..###### ######..
-;; ....###. .###....
-;; ...##..# #..##...
-;; ....##.. ..##....
-octo2b:		.byte	0x00,0x00,0x00,0xdd, 0xdd,0x00,0x00,0x00
-		.byte	0x00,0x0d,0xdd,0xdd, 0xdd,0xdd,0xd0,0x00
-		.byte	0x00,0xdd,0xdd,0xdd, 0xdd,0xdd,0xdd,0x00
-		.byte	0x00,0xdd,0xd0,0x0d, 0xd0,0x0d,0xdd,0x00
-		.byte	0x00,0xdd,0xdd,0xdd, 0xdd,0xdd,0xdd,0x00
-		.byte	0x00,0x00,0xdd,0xd0, 0x0d,0xdd,0x00,0x00
-		.byte	0x00,0x0d,0xd0,0x0d, 0xd0,0x0d,0xd0,0x00
-		.byte	0x00,0x00,0xdd,0x00, 0x00,0xdd,0x00,0x00
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;; LASER BASE (LIGHTCYAN) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; .......# ........
-;; ......## #.......
-;; ......## #.......
-;; ..###### #####...
-;; .####### ######..
-;; .####### ######..
-;; .####### ######..
-;; .####### ######..
-cannon1:	.byte	0x00,0x00,0x00,0x0b, 0x00,0x00,0x00,0x00
-  		.byte	0x00,0x00,0x00,0xbb, 0xb0,0x00,0x00,0x00
-  		.byte	0x00,0x00,0x00,0xbb, 0xb0,0x00,0x00,0x00
-  		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xb0,0x00
-  		.byte	0x0b,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
-  		.byte	0x0b,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
-  		.byte	0x0b,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
-  		.byte	0x0b,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
-
-;; ........ #.......
-;; .......# ##......
-;; .......# ##......
-;; ...##### ######..
-;; ..###### #######.
-;; ..###### #######.
-;; ..###### #######.
-;; ..###### #######.
-cannon2:	.byte	0x00,0x00,0x00,0x00, 0xb0,0x00,0x00,0x00
-  		.byte	0x00,0x00,0x00,0x0b, 0xbb,0x00,0x00,0x00
-  		.byte	0x00,0x00,0x00,0x0b, 0xbb,0x00,0x00,0x00
-  		.byte	0x00,0x0b,0xbb,0xbb, 0xbb,0xbb,0xbb,0x00
-  		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0xb0
-  		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0xb0
-  		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0xb0
-  		.byte	0x00,0xbb,0xbb,0xbb, 0xbb,0xbb,0xbb,0xb0
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
-
-timer_isr:	ld	hl,(timer_invaders)
+timer_service:	ld	hl,(timer_invaders)
 		ld	a,h
 		or	l
 		jr	z,timer_isr2
@@ -1239,9 +619,14 @@ timer_isr5:	ld	a,(timer_newbomb)
 		dec	a
 		ld	(timer_newbomb),a
 
+timer_isr6:	ld	hl,(cannondie_state)
+		ld	a,h
+		or	l
+		ret	z
+		dec	hl
+		ld	(cannondie_state),hl
 
-timer_isr6:	ld	hl,(isr2vector_copy)
-		jp	(hl)
+		ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
 
@@ -1272,7 +657,13 @@ lfsr4:		rl	l
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
 
-newbomb:	ld	ix,#bomb_basedata
+newbomb:
+		ld	hl,(cannondie_state)	;If dying, stop launching new bombs
+		ld	a,h
+		or	l
+		ret	nz
+
+		ld	ix,#bomb_basedata
 		ld	b,#NUM_BOMBS
 
 newbomb1:	push	bc
@@ -1375,6 +766,7 @@ nbupd1a:	ld	d,h
 		ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+
 nb_testcol:		
 		; will test a column to launch a bomb
 		; return  # if invaders in col in D, Lowest row w/ invader in col in E
@@ -1434,6 +826,7 @@ move_bombs_ix:
 		cp	#(CANNON_VPOS+8)
 		jr	c,moveb1
 
+		; Bomb reached bottom of screen.
 		xor	a
 		ld	_BOMB_ACT(ix),a
 		ld	l,_BOMB_SCRPOS_L(ix)
@@ -1467,15 +860,37 @@ moveb1:		inc	a
 		and	d
 		jr	z,moveb2
 
-	;	push	hl
-	;	call	check_hit		; TODO: Check bomb vs cannon hit
-	;	pop	hl
+		; Bomb hit something.
+
+		ld	a,_BOMB_VPOS(ix)
+		cp	#CANNON_VPOS
+		jr	c,moveb1a	;Not the cannon
+
+		ld	a,(cannon_hpos_px)
+		inc	a		;Actual cannon graphics start at next column
+		ld	c,a
+		ld	a,_BOMB_HPOS_PX(ix)
+		cp	c
+		jr	c,moveb1a	;Was at left of cannon
+
+		ld	a,(cannon_hpos_px)
+		add	a,#13		;Cannon graphics end 13 columns after
+		ld	c,a
+		ld	a,_BOMB_HPOS_PX(ix)
+		cp	c
+		jr	nc,moveb1a	;Was at right of cannon
+
+		push	hl
+		ld	hl,#600
+		ld	(cannondie_state),hl
+		pop	hl
 		
-		ld	a,#0
+moveb1a:	ld	a,#0
 		ld 	_BOMB_ACT(ix),a
 		ld	c,#0
 		
-moveb2:		ld	b,#5
+moveb2:		; Redrawing the bomb
+		ld	b,#5
 		ld	de,#-BYTES_PER_LINE
 
 moveb3:		ld	a,l
@@ -1508,12 +923,57 @@ moveb4:		ld	a,l
 		add	hl,de
 		djnz	moveb4
 		ret
-		
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+
+print_score:	ld	hl,#strscore
+		ld	de,#0
+		ld	c,#12	;Light red
+		call	print_string
+		ld	hl,(score)
+		ld	de,#24
+		ld	c,#9	;Light blue
+		jp	print_number
+
+strscore:	.ascii	'SCORE:\0'
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+sysm_printh8:	; Value in ACC
+
+		push	bc
+		ld	b,a
+		srl	a
+		srl	a
+		srl	a
+		srl	a
+		cp	#10
+		jr	nc,sysm_ph8a
+		add	a,#'0'
+		jr	sysm_ph8b
+sysm_ph8a:
+		add	a,#'A'-10
+sysm_ph8b:
+		rst	0x08
+
+		ld	a,b
+		and	#0x0f
+		cp	#10
+		jr	nc,sysm_ph8c
+		add	a,#'0'
+		jr	sysm_ph8d
+sysm_ph8c:
+		add	a,#'A'-10
+sysm_ph8d:
+		rst	0x08
+		pop	bc
+		ret
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
 
 		.area _DATA
 
-isr2vector_copy:.ds	2
+inputs_state: 	.ds	1
 
 cannon_hpos_px:	.ds	1
 missile_hpos_px:.ds	1
@@ -1525,25 +985,23 @@ missile_scrpos:	.ds	2
 row_invaders:	.ds	1
 col_invaders_px:.ds	1
 hdir_invaders:	.ds	1
-scrpos_invaders:.ds	2
 
 invader_matrix:	.ds	INVADER_NUM
 invader_count:	.ds	1
 invader_matnow:	.ds	2
-invader_matnow2:.ds	2
 col_start:	.ds	1
 col_end:	.ds	1
 col_now:	.ds	1
-row_now:	.ds	1
 row_end:	.ds	1
-stepping:	.ds	1
-spritepos:	.ds	2
-spritenow:	.ds	2
 timer_div:	.ds	2
 timer_invaders:	.ds	2
 invaders_divider:.ds	2
 timer_cannon:	.ds	1
 timer_missile:	.ds	1
+cannondie_state:.ds	2
+refsh_cannon:	.ds	1
+score:		.ds	2
+scrinc:		.ds	1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 bomb_basedata:

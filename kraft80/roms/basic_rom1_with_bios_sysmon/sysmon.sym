@@ -1,0 +1,39 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    .__.$$$.=  002710 L   |     .__.ABS.=  000000 G   |     .__.CPU.=  000000 L
+    .__.H$L.=  000000 L   |     ACK     =  000006     |     CR      =  00000D 
+    EOT     =  000004     |     ESC     =  00001B     |     NAK     =  000015 
+    PORTBUTT=  000000     |     PORTDISP=  000010     |     PORTLEDS=  000000 
+    RAMBASE =  004000     |     RAMTOP  =  004200     |     SOH     =  000001 
+    SYSM_BUF=  004000     |     SYSM_BUF=  004080     |     SYSM_BUF=  000080 
+    SYSM_FLA=  004085     |     SYSM_LAS=  004081     |     SYSM_LAS=  004083 
+  1 dumphdr    000106 R   |   1 endloop_   000326 R   |   1 load_xm_   000315 R
+  1 load_xmo   00029F R   |   1 load_xmo   0002DC R   |   1 load_xmo   00031C R
+  1 loop_xmo   0002B0 R   |   1 loop_xmo   0002FA R   |   1 msg_ld_x   000042 R
+  1 msg_run    0002D5 R   |   1 parsehex   0001A3 R   |   1 parsehex   0001C9 R
+  1 parsehex   0001AE R   |   1 parsehex   000187 R   |   1 parsehex   00019F R
+  1 parsehex   0001CD R   |   1 parsehex   0001DF R   |   1 parsehex   0001E1 R
+  1 parsehex   0001E6 R   |     prints     ****** GX  |   1 serial_g   00032B R
+  1 serial_g   00032C R   |   1 signon_s   000000 R   |   1 skip_spc   000180 R
+  1 str_basi   00005B R   |   1 str_go     000099 R   |   1 str_load   00026E R
+  1 str_load   000061 R   |   1 strcomp1   0001F2 R   |   1 strcompa   0001EB R
+  1 sysm_crl   00021D R   |   1 sysm_dum   00013D R   |   1 sysm_dum   00014D R
+  1 sysm_dum   000155 R   |   1 sysm_dum   000165 R   |   1 sysm_edi   0000C1 R
+  1 sysm_edi   000101 R   |   1 sysm_edi   0000D1 R   |   1 sysm_edi   0000EC R
+  1 sysm_go    00009F R   |   1 sysm_go2   0000B9 R   |   1 sysm_gor   0000BA R
+  1 sysm_ph8   00020A R   |   1 sysm_ph8   00020C R   |   1 sysm_ph8   000218 R
+  1 sysm_ph8   00021A R   |   1 sysm_pri   0001F8 R   |   1 sysm_pro   000067 R
+  1 sysm_rdl   000259 R   |   1 sysm_rdl   000249 R   |   1 sysm_rea   000224 R
+  1 sysmon     000018 GR  |   1 sysmon_l   000052 R   |     timecoun=  0041FE 
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+Area Table
+
+   0 _CODE      size      0   flags    0
+   1 CODE       size    333   flags    0
+

@@ -1,0 +1,18 @@
+XL3
+H 3 areas 1 global symbols
+S .__.ABS. Def000000
+A _CODE size 0 flags 0 addr 0
+A CODE size 20 flags 0 addr 0
+A _DATA size 0 flags 0 addr 0
+T 00 00 00 01 01 01 21 00 40 2B 7C B5 20 FB 79 D3
+R 00 00 01 00
+T 0D 00 00 00 CB 40 28 04 CB 27 18 02
+R 00 00 01 00
+T 16 00 00
+R 00 00 01 00
+T 16 00 00 CB 3F
+R 00 00 01 00
+T 18 00 00
+R 00 00 01 00
+T 18 00 00 4F E6 81 28 E6 04 18 E3
+R 00 00 01 00

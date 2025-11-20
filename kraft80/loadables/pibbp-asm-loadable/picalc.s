@@ -70,8 +70,6 @@ PORTB           .equ 0x10 ;PORTB address
 EN              .equ 0x01 ;LCD enable pin (PORTB bit 1)
 RS              .equ 0x01 ;LCD RS pin (uses or logic)
 
-USE_KRAFTMON	.equ	0
-
 ; Algorithm constants
 NUM_DECS        .equ 11
 NUM_IT          .equ ((NUM_DECS*9)/10)
@@ -83,18 +81,8 @@ NBITS           .equ NBITS_INT+NBITS_FRAC
 NBYTES          .equ NBITS>>3
 NBYTES1         .equ (NBYTES-1)
 
-    .area	_HEADER (ABS)
+    .area	CODE
 
-		.if	USE_KRAFTMON == 1
-
-		.org 0x2100
-
-		.else
-
-		.org 0x4200
-
-		.endif
-	
     jp _main
 
 ;///////////////////////////////////////////////////////////////////////////////
@@ -1984,7 +1972,7 @@ test_pi_bbp_1a:
 test_pi_bbp_2:
 test_pi_bbp_end:
 
-    call lcd_clear
+    ;call lcd_clear
     call prints
     .ascii "\r\nPI:"
     .db 0
@@ -1998,6 +1986,9 @@ test_pi_bbp_end:
     add hl,sp
     ld sp,hl
     pop ix
+    call prints
+    .ascii "\r\nPress any key to exit...\r\n\0"
+    rst 0x10
     ret
 
 ;///////////////////////////////////////////////////////////////////////////////
@@ -2008,12 +1999,12 @@ test_pi_bbp_end:
 ;   Affects: BC DE HL AF IY BC' DE' HL' AF'
 _main:
 
-    call lcd_begin    ;inicializa LCD no modo 4 bits		
-    ld d,#2            ;carrega 2d em d 
-    call dx100ms      ;aguarda 500ms 				
-    ld b,#0x0C        ;desliga cursor e blink 
-    call lcd_cmd      ;envia comando 
-    call msg_init     ;escreve título "Alpha Z80" 
+    ;call lcd_begin    ;inicializa LCD no modo 4 bits		
+    ;ld d,#2            ;carrega 2d em d 
+    ;call dx100ms      ;aguarda 500ms 				
+    ;ld b,#0x0C        ;desliga cursor e blink 
+    ;call lcd_cmd      ;envia comando 
+    ;call msg_init     ;escreve título "Alpha Z80" 
 
     call test_pi_bbp
     ret
@@ -2155,7 +2146,7 @@ lcd_clear:
 msg_init:
     ;ld b,#0xC0        ;posiciona cursor na linha 1, coluna 0
     ;call lcd_cmd      ;envia comando
-    call lcd_home2
+    ;call lcd_home2
     call prints
     .ascii "PICALC 1.0"
     .db 0

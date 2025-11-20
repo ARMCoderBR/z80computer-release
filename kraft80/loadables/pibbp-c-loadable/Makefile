@@ -2,8 +2,7 @@ all:				pibbp.bin
 
 pibbp.bin:			pibbp.c ../io-kraft80/io-kraft80.h ../io-kraft80/crt0-kraft80-loadable.rel ../io-kraft80/io-kraft80.rel 
 				sdcc -c -V --disable-warning 85 -mz80 -I../io-kraft80 --opt-code-size --std-sdcc99 pibbp.c
-				#sdcc -mz80 --code-loc 0x3200 -DUSE_KRAFTMON=1 --no-std-crt0 -Wl -b_MAIN=0x2100,-b_DATA=0x3800 ../io-kraft80/crt0-kraft80-loadable.rel ../io-kraft80/io-kraft80.rel pibbp.rel
-				sdcc -mz80 --code-loc 0x5300 -DUSE_KRAFTMON=0 --no-std-crt0 -Wl -b_MAIN=0x4200,-b_DATA=0x5A00 ../io-kraft80/crt0-kraft80-loadable.rel ../io-kraft80/io-kraft80.rel pibbp.rel
+				sdcc -mz80 --code-loc 0x4280 -DUSE_KRAFTMON=0 --no-std-crt0 ../io-kraft80/crt0-kraft80-loadable.rel ../io-kraft80/io-kraft80.rel pibbp.rel
 				mv crt0-kraft80-loadable.ihx pibbp.ihx
 				objcopy --input-target=ihex --output-target=binary pibbp.ihx pibbp.bin
 

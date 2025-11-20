@@ -1,7 +1,7 @@
 # Kraft 80
 A Z80-based computer for nostalgic enthusiasts\
 ©2025 - ARMCoder\
-UPDATED 2025 - October 12
+UPDATED 2025 - November 19
 
 <IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/20251105_182716.jpg?raw=true" width=600>
 
@@ -30,7 +30,7 @@ Then I've already built a first tentative true PCB for it, This one pictured her
 
 <IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/IMG-20250930-WA0026.jpeg?raw=true" width=600>
 
-There's a newer revision already designed and ordered (not delivered yet). This revision (called 2.2) fixes some mistakes and add some expansion connectors:
+There's a newer revision that's *almost* perfect in my opinion. This revision (called 2.2) fixes some mistakes and add some expansion connectors:
 
 <IMG SRC="https://github.com/ARMCoderBR/z80computer-release/blob/main/kraft80/20251105_183344.jpg?raw=true" width=600>
   

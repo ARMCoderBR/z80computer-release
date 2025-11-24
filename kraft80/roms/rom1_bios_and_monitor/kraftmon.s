@@ -1,5 +1,5 @@
 ;--------------------------------------------------------------------------
-;  sysmon.s - Simple monior for the Kraft 80
+;  kraftmon.s - Simple monior for the Kraft 80
 ;
 ;  Copyright (C) 2025, ARMCoder
 ;
@@ -29,21 +29,21 @@ NAK		.equ	21
 ESC		.equ	27
 
 	;///////////////////////////////////////////////////////////////////////
-	;////////////////////////   SYSMON MONITOR   ///////////////////////////
+	;/////////////////////////   KRAFTMON MONITOR   ////////////////////////
 	;///////////////////////////////////////////////////////////////////////
 
-	.module sysmon
+	.module kraftmon
 
-	.globl sysmon
+	.globl kraftmon
 
 	.area	CODE
 
 
-signon_sysmon:
-	.ascii	'\r\nSysmon by ARMCoder\r\n\n\0'
+signon_kraftmon:
+	.ascii	'\r\nKraftmon by ARMCoder\r\n\n\0'
 
-sysmon:
-	ld	hl,#signon_sysmon
+kraftmon:
+	ld	hl,#signon_kraftmon
 	call	prints
 
 	ld	hl,#RAMTOP
@@ -54,7 +54,7 @@ sysmon:
 	ld	(SYSM_FLAGS),a
 	in	a,(PORTBUTTONS)
 	bit	6,a
-	jr	nz,sysmon_loop
+	jr	nz,kraftmon_loop
 
 	ld	a,#1
 	ld	(SYSM_FLAGS),a
@@ -69,13 +69,13 @@ sysmon:
 msg_ld_xmodem:
 	.ascii	"Loading XMODEM.\0"
 
-sysmon_loop:
+kraftmon_loop:
 	xor	a
 	ld	(SYSM_BUFPTR),a
 
 	call sysm_prompt
 
-	jr	sysmon_loop
+	jr	kraftmon_loop
 
 	;///////////////////////////////////////////////////////////////////////
 str_basic:
@@ -566,6 +566,6 @@ serial_getchar1:
 	ret
 
 	;///////////////////////////////////////////////////////////////////////
-	;//////////////////////////   SYSMON END   /////////////////////////////
+	;///////////////////////////   KRAFTMON END   //////////////////////////
 	;///////////////////////////////////////////////////////////////////////
 

@@ -6,6 +6,6 @@
 -k /usr/share/sdcc/lib/z80
 -l z80
 crt0-kraft80-v2.rel
-sysmon.rel
+kraftmon.rel
 
 -e

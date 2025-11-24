@@ -31,23 +31,23 @@ Symbol Table
   A keyt4      000412 R   |   A keyt4a     000411 R   |   A keyt4b     000410 R
   A keyt5      0003E8 R   |   A keyt5a     0003F6 R   |   A keyt5b     0003FD R
   A keyt6      000390 R   |   A keyt6a     0003A3 R   |   A keyt6b     0003AB R
-  A keyt6c     0003B1 R   |     kflags  =  0041A5     |     l__INITI   ****** GX
-    lastkey =  0041A6     |     lastline=  004198     |   A lcd_clea   000554 R
-  A lcd_home   00052F R   |   A lcd_home   000541 R   |   A lcd_init   000566 R
-  A lcd_out    0005B9 R   |   A lcd_w1     0004FC R   |   A lcd_w2     000503 R
-  A lcd_wmsg   000526 R   |   A lcd_writ   0004EE R   |   A mon_getc   0000E9 R
-  A mon_hask   0000F6 R   |   A mon_putc   0000DC R   |   A msgk1      00002A R
-  A msgk2      000033 R   |   A nextrow1   00025C R   |   A prints     0001A0 GR
-  A ps2_isr    00007E R   |   A putbs      000210 R   |   A putchar    00021F R
-  A putclr     0002A9 R   |   A putclr1    0002CE R   |   A putcnext   00024C R
-  A putcr      00026B R   |   A putlf      000288 R   |   A putlf1     0002A6 R
-  A putlf2     00029C R   |   A readk1     000357 R   |   A readkey    000349 R
-  A rx_char    0001DD R   |   A rx_char0   0001E4 R   |   A rx_char1   000209 R
-  A rx_char2   0001F4 R   |   A rx_isr     0000A8 R   |   A rx_isr1    0000B2 R
-  A rx_isr1a   0000BD R   |   A rx_isr2    0000D8 R   |     s__INITI   ****** GX
-    s__INITI   ****** GX  |   A scroll3    000320 R   |   A scroll_c   0002DC R
-  A scroll_c   0002E8 R   |   A scroll_c   000314 R   |     scrollcn=  004197 
-  A signon     000000 R   |     sysflag =  0041A7     |     sysmon     ****** GX
+  A keyt6c     0003B1 R   |     kflags  =  0041A5     |     kraftmon   ****** GX
+    l__INITI   ****** GX  |     lastkey =  0041A6     |     lastline=  004198 
+  A lcd_clea   000554 R   |   A lcd_home   00052F R   |   A lcd_home   000541 R
+  A lcd_init   000566 R   |   A lcd_out    0005B9 R   |   A lcd_w1     0004FC R
+  A lcd_w2     000503 R   |   A lcd_wmsg   000526 R   |   A lcd_writ   0004EE R
+  A mon_getc   0000E9 R   |   A mon_hask   0000F6 R   |   A mon_putc   0000DC R
+  A msgk1      00002A R   |   A msgk2      000033 R   |   A nextrow1   00025C R
+  A prints     0001A0 GR  |   A ps2_isr    00007E R   |   A putbs      000210 R
+  A putchar    00021F R   |   A putclr     0002A9 R   |   A putclr1    0002CE R
+  A putcnext   00024C R   |   A putcr      00026B R   |   A putlf      000288 R
+  A putlf1     0002A6 R   |   A putlf2     00029C R   |   A readk1     000357 R
+  A readkey    000349 R   |   A rx_char    0001DD R   |   A rx_char0   0001E4 R
+  A rx_char1   000209 R   |   A rx_char2   0001F4 R   |   A rx_isr     0000A8 R
+  A rx_isr1    0000B2 R   |   A rx_isr1a   0000BD R   |   A rx_isr2    0000D8 R
+    s__INITI   ****** GX  |     s__INITI   ****** GX  |   A scroll3    000320 R
+  A scroll_c   0002DC R   |   A scroll_c   0002E8 R   |   A scroll_c   000314 R
+    scrollcn=  004197     |   A signon     000000 R   |     sysflag =  0041A7 
   A tab_xlat   000415 R   |     timecoun=  0041FE     |   A timer_is   000076 R
   A tx_char    0001CF R   |   A user_fns   0001A9 R   |     vidcol  =  004194 
     vidptr  =  004195     |     vidrow  =  004193     |   A wait1      000155 R

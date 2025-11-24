@@ -7,7 +7,7 @@ Area                                    Addr        Size        Decimal Bytes (A
 
       Value  Global                              Global Defined In Module
       -----  --------------------------------   ------------------------
-     00000000  .__.ABS.                           sysmon
+     00000000  .__.ABS.                           kraftmon
      00000000  l__BSEG                         
      00000000  l__BSS                          
      00000000  l__CODE                         
@@ -39,12 +39,12 @@ Area                                    Addr        Size        Decimal Bytes (A
      00000003  l__HEADER7                      
      00000040  s_CODE                          
      00000040  s__CODE                         
-     0000091D  l_CODE                          
-     0000095D  s__GSFINAL                      
-     0000095D  s__GSINIT                       
-     0000095D  s__HOME                         
-     0000095D  s__INITIALIZER                  
-     0000095D  s__MAIN                         
+     0000091F  l_CODE                          
+     0000095F  s__GSFINAL                      
+     0000095F  s__GSINIT                       
+     0000095F  s__HOME                         
+     0000095F  s__INITIALIZER                  
+     0000095F  s__MAIN                         
      00008000  s__BSEG                         
      00008000  s__BSS                          
      00008000  s__DATA                         
@@ -128,19 +128,19 @@ Hexadecimal  [32-Bits]
 
 Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------
-CODE                                00000040    0000091D =        2333. bytes (REL,CON)
+CODE                                00000040    0000091F =        2335. bytes (REL,CON)
 
       Value  Global                              Global Defined In Module
       -----  --------------------------------   ------------------------
      000001E0  prints                             crt0
-     00000642  sysmon                             sysmon
+     00000644  kraftmon                           kraftmon
 
 ASxxxx Linker V03.00 + NoICE + sdld,  page 11.
 
 Files Linked                              [ module(s) ]
 
 crt0-kraft80-v2.rel                       [ crt0 ]
-sysmon.rel                                [ sysmon ]
+kraftmon.rel                              [ kraftmon ]
 
 ASxxxx Linker V03.00 + NoICE + sdld,  page 12.
 

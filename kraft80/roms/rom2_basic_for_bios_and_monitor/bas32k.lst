@@ -4840,5 +4840,6 @@ Hexadecimal [24-Bits]
       003C49 CD 71 26         [17] 4424 OUTNCR: CALL    OUTC            ; Output character in A
       003C4C C3 98 2A         [10] 4425         JP      PRNTCRLF        ; Output CRLF
                                    4426 
-                                   4427 ;.end
-                                   4428 
+                                   4427 	.area	_DATA
+                                   4428 ;.end
+                                   4429 

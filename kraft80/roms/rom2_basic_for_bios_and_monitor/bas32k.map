@@ -9,12 +9,13 @@ Area                                    Addr        Size        Decimal Bytes (A
       -----  --------------------------------   ------------------------
      00000000  .__.ABS.                           basic
      00000000  l__CODE                         
+     00000000  l__DATA                         
      00000000  l__HEADER                       
      00000000  s__HEADER                       
      00000000  s__HEADER0                      
      00001C4F  l__HEADER0                      
      00002000  s__CODE                         
-
+     00008000  s__DATA                         
 ASxxxx Linker V03.00 + NoICE + sdld,  page 2.
 Hexadecimal  [32-Bits]
 

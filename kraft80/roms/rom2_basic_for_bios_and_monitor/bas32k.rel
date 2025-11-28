@@ -1,10 +1,11 @@
 XL3
-H 3 areas 1 global symbols
+H 4 areas 1 global symbols
 M basic
 S .__.ABS. Def000000
 A _CODE size 0 flags 0 addr 0
 A _HEADER size 0 flags 8 addr 0
 A _HEADER0 size 1C4F flags 8 addr 2000
+A _DATA size 0 flags 0 addr 0
 T 00 20 00
 R 00 00 02 00
 T 00 20 00 C3 06 20 C3 A4 20

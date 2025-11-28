@@ -4424,5 +4424,6 @@ TSTBIT: PUSH    AF              ; Save bit mask
 OUTNCR: CALL    OUTC            ; Output character in A
         JP      PRNTCRLF        ; Output CRLF
 
+	.area	_DATA
 ;.end
 

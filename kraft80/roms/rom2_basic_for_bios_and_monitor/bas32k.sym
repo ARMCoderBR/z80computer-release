@@ -240,4 +240,5 @@ Area Table
    0 _CODE      size      0   flags    0
    1 _HEADER    size      0   flags    8
    2 _HEADER0   size   1C4F   flags    8
+   3 _DATA      size      0   flags    0
 

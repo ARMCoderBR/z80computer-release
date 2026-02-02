@@ -1,0 +1,277 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 1.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    .__.$$$.=  002710 L   |     .__.ABS.=  000000 G   |     .__.CPU.=  000000 L
+    .__.H$L.=  000000 L   |   B ABPASS     001218 R   |   B ABS        001864 R
+  B ACCSUM     000A81 R   |   B ACPASS     001217 R   |   B ADD30      001D76 R
+  B ADD301     001D86 R   |   B ADDEXP     0017FD R   |   B ADDIG      0019A3 R
+  B ADDPHL     0015EA R   |   B ALLFOL     0014E6 R   |   B ANTVLU     000D81 R
+  B ARET       001CF4 R   |   B ARETN      001E40 R   |   B ARLDSV     001138 R
+    ARREND  =  0023DA     |   B ARRLP      0013B1 R   |   B ASC        0014B7 R
+  B ASCTFP     001946 R   |   B ASPCS      000CE3 R   |   B ATN        001CA8 R
+  B ATN1       001CC5 R   |   B ATNTAB     001CCF R   |   B ATOH       000ABC R
+  B BADINP     000D08 R   |   B BAKSTK     000541 R   |   B BAKTMP     001497 R
+    BASTXT  =  00235E     |   B BCDEFP     00188B R   |   B BFREE      0002AD R
+  B BIN        001DC8 R   |   B BIN2       001DCE R   |   B BINERR     001E25 R
+  B BINIT      001E04 R   |   B BINTFP     001DFA R   |   B BITOUT     001DE2 R
+  B BITOUT2    001DE6 R   |     BKSP    =  000008     |     BN      =  000028 
+  B BNORM      00164A R   |   B BNRMLP     00164D R   |   B BRK        000A33 R
+    BRKFLG  =  00234D     |     BRKLIN  =  0023CE     |   B BRKMSG     00053B R
+  B BRKRET     0002A7 R   |     BS      =  000010     |   B BSERR      00116B R
+    BUFFER  =  002361     |     BUFRXSIZ=  000080     |   B BYT2ASC    001D6D R
+  B BYTSFT     001782 R   |   B CFEVAL     0010CE R   |   B CHARTY     00107C R
+  B CHEKFN     0012AF R   |   B CHKBIN     001E17 R   |   B CHKLTR     000A8E R
+  B CHKSTK     000575 R   |     CHKSUM  =  00234A     |   B CHKSYN     000866 R
+  B CHKTYP     000E62 R   |   B CHR        0014C8 R   |   B CLEAR      000AE1 R
+  B CLOTST     00089B R   |   B CLREG      0006CA R   |   B CLRPTR     0006A5 R
+  B CLS        001CF7 R   |   B CMPFP      0018D4 R   |   B CMPLG1     000FE2 R
+  B CMPLOG     000FE0 R   |   B CMPNUM     0018BA R   |   B CMPRES     001024 R
+  B CMPSTR     00100C R   |     CN      =  000020     |   B CNVNUM     001952 R
+  B COLD       000200 R   |     COMMAN  =  002343     |   B COMPL      0016AA R
+  B CONCAT     00142C R   |   B CONEXP     001982 R   |   B CONPOS     001647 R
+  B CONT       000A66 R   |     CONTAD  =  0023D4     |   B CONVAR     000F4D R
+  B COPY       000220 R   |   B COS        001C2C R   |   B COUNT      00090B R
+  B CPDEHL     000860 R   |   B CPYLIT     00079C R   |     CR      =  00000D 
+  B CRARLP     00118B R   |   B CREARY     001170 R   |   B CRESTR     000BE0 R
+  B CRNCLP     0006FD R   |   B CRTMST     0012E8 R   |   B CRTST      0012F4 R
+  B CRTSTE     00130A R   |   B CRUNCH     0006F4 R   |     CS      =  00000C 
+  B CSTART     000211 R   |     CTLOFG  =  002345     |     CTRLC   =  000003 
+    CTRLG   =  000007     |     CTRLO   =  00000F     |     CTRLQ   =  000011 
+    CTRLR   =  000012     |     CTRLS   =  000013     |     CTRLU   =  000015 
+    CUROPR  =  0023C5     |     CURPOS  =  0023AB     |   B DATA       000B87 R
+    DATFLG  =  0023AE     |     DATLIN  =  0023C9     |   B DATSNR     000592 R
+  B DCBCDE     00190B R   |     DD      =  000012     |   B DDERR      0005A1 R
+  B DEEK       001D13 R   |   B DEF        00122C R   |   B DEFSIZ     001193 R
+  B DEINT      000AA2 R   |     DEL     =  00007F     |   B DELCHR     0007CC R
+  B DEPINT     000A9C R   |   B DETHL4     00189A R   |   B DETHLB     00189C R
+  B DIGTXT     001A4C R   |   B DIM        00104E R   |   B DIMRET     001045 R
+  B DINPOS     000895 R   |   B DIV        001793 R   |     DIV1    =  00230A 
+  B DIV10      001787 R   |     DIV2    =  00230E     |     DIV3    =  002312 
+    DIV4    =  002315     |   B DIVLP      0017BA R   |     DIVSUP  =  002309 
+  B DOAGN      0006E3 R   |   B DOCOM      000CB4 R   |   B DODEL      0007AC R
+  B DOEBIT     001A8C R   |   B DOFN       001259 R   |   B DOKE       001D1E R
+  B DONULL     000CA2 R   |   B DOSPC      000CDE R   |   B DOTAB      000CCB R
+  B DPOINT     00197E R   |   B DTSTR      0012F8 R   |   B DVBCDE     001795 R
+    DZ      =  000014     |   B DZERR      00059B R   |   B ECHDEL     0007C0 R
+  B EDIGIT     0019C5 R   |   B ENDBUF     0007A3 R   |   B ENDCON     001991 R
+  B ENDDIM     0011F2 R   |   B ENDINP     000C93 R   |   B ENDNAM     001070 R
+  B ENDPRG     000A42 R   |   B ENFMEM     00057E R   |   B ERRIN      0005CC R
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 2.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    ERRLIN  =  0023D2     |   B ERRMSG     000529 R   |   B ERROR      0005AC R
+  B ERRORS     0004B4 R   |     ESC     =  00001B     |   B EVAL       000E6F R
+  B EVAL1      000E72 R   |   B EVAL2      000E7B R   |   B EVAL3      000E7E R
+  B EVLPAR     000F34 R   |   B EVNOT      00102E R   |   B EXCUTE     0009D0 R
+  B EXP        001B26 R   |   B EXPLP      001970 R   |   B EXPTAB     001B66 R
+  B EXPTEN     001A9E R   |   B EXTIG      000DDD R   |   B FANDT      000E07 R
+    FC      =  000008     |   B FCERR      000AB7 R   |   B FDTLP      000DEE R
+  B FINDEL     0011CE R   |   B FLGDIF     00184A R   |   B FLGREL     001851 R
+    FNARG   =  0023E0     |   B FNCTAB     0002FE R   |   B FNDARY     00113E R
+  B FNDELP     0011D3 R   |   B FNDEND     000678 R   |   B FNDNUM     0015BB R
+  B FNDTOK     0008EA R   |   B FNDVAR     0010B5 R   |   B FNDWRD     000727 R
+  B FNOFST     000F5E R   |     FNRGNM  =  0023DE     |   B FNTHR      0010C3 R
+  B FNVAL      000F85 R   |   B FOPRND     000EA7 R   |   B FOR        000937 R
+    FORFLG  =  0023CB     |   B FORFND     000967 R   |   B FORSLP     00094B R
+  B FPADD      0015F9 R   |   B FPBCDE     001880 R   |     FPEXP   =  0023E7 
+  B FPINT      0018E7 R   |   B FPMULT     001734 R   |     FPREG   =  0023E4 
+  B FPROND     001691 R   |   B FPSINT     000A96 R   |   B FPTHL      001897 R
+  B FRE        0011F6 R   |   B FRENUM     001212 R   |   B FRMEVL     000F50 R
+  B GARBGE     001379 R   |   B GARBLP     00137C R   |   B GETCHR     0009F0 R
+  B GETCMD     0005F0 R   |   B GETHEX     001DA3 R   |   B GETINP     001CF5 R
+  B GETINT     0015BE R   |   B GETLEN     0014AC R   |   B GETLIN     0007DD R
+  B GETLN      000ABD R   |   B GETNUM     000E5D R   |   B GETNXT     000742 R
+  B GETSTR     001476 R   |   B GETVAR     001053 R   |   B GNXARY     0013B0 R
+  B GOFUNC     000F8D R   |   B GOSUB      000B33 R   |   B GOTO       000B44 R
+  B GRBARY     0013D0 R   |   B GRBDON     001351 R   |   B GRBLP      00138A R
+  B GSTRCU     001479 R   |   B GSTRDE     00147D R   |   B GSTRHL     00147C R
+  B GTFLNM     0014BB R   |   B GTFNAM     001058 R   |   B GTLNLP     000AC0 R
+  B GTSIXD     001A16 R   |   B GTVLUS     000D59 R   |   B HALF       001ABD R
+  B HALFPI     001C76 R   |   B HEX        001D35 R   |   B HEX1       001D4E R
+  B HEX2       001D50 R   |   B HEX3       001D5E R   |   B HEX4       001D60 R
+  B HEXIT      001DBA R   |   B HEXLP      001D96 R   |   B HEXLP1     001D9B R
+  B HEXTFP     001D8A R   |     HX      =  000026     |   B HXERR      001DC3 R
+    ID      =  000016     |   B IDTEST     0012A1 R   |   B IF         000C16 R
+  B IFGO       000C24 R   |   B IFJMP      0009D7 R   |   B INCHL      001895 R
+  B INCLEN     000891 R   |   B INDFND     00055B R   |   B INEWLN     000640 R
+  B INIT       000218 R   |   B INITAB     0004C9 R   |   B INITBE     000529 R
+  B INITST     001E38 R   |   B INMSG      000530 R   |   B INP        00157B R
+  B INPBIN     000DAB R   |   B INPBRK     000A3F R   |     INPORT  =  00233F 
+    INPSUB  =  00233E     |   B INPUT      000D19 R   |   B INRNG      001A1F R
+  B INT        001912 R   |   B INTVAR     0006B4 R   |   B INVSGN     001868 R
+  B ITMSEP     000D9C R   |   B JJUMP1     001E2A R   |   B JSTZER     001AA8 R
+  B KILFOR     000E4D R   |   B KILIN      0007D7 R   |     LCRFLG  =  0023AC 
+  B LEFT       0014D8 R   |   B LEN        0014A8 R   |   B LET        000B9E R
+  B LETNUM     000BF1 R   |   B LETSTR     000BB9 R   |     LF      =  00000A 
+  B LFRGNM     001571 R   |     LINEAT  =  00235C     |   B LINEIN     0019D1 R
+  B LINES      001D04 R   |     LINESC  =  002346     |     LINESN  =  002348 
+  B LINFND     000629 R   |   B LIST       0008AC R   |   B LISTLP     0008B8 R
+  B LOADFP     00188E R   |   B LOG        0016F3 R   |   B LOGTAB     0016E6 R
+  B LOKFOR     000545 R   |     LOOPST  =  0023C7     |     LS      =  00001C 
+    LSTBIN  =  0023CC     |   B LSTLP2     0008D8 R   |   B LSTLP3     0008DB R
+    LSTRAM  =  0023AF     |     LSTRND  =  00233A     |   B LTSTND     000DB6 R
+    LWIDTH  =  002342     |   B MAKINT     0015C1 R   |   B MAKNUM     001A3B R
+  B MANLP      00195A R   |   B MATCH      000774 R   |   B MEMMSG     0002F3 R
+  B MID        001512 R   |   B MID1       0014DE R   |   B MIDNUM     001576 R
+  B MINCDE     001639 R   |   B MINUS      000F3C R   |   B MKTMST     0012E5 R
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 3.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+  B MLDBLP     001933 R   |   B MLDEBC     00192B R   |   B MLOOP      000248 R
+  B MLSP10     001828 R   |     MO      =  000024     |   B MONITR     001E35 R
+  B MONOUT     001E31 R   |   B MORDT      000DC2 R   |   B MORINP     0007E6 R
+  B MOVBUF     00065F R   |   B MOVDIR     00077C R   |   B MOVLP      00056A R
+  B MOVSTR     000567 R   |   B MOVUP      000564 R   |   B MRPRNT     000C36 R
+  B MSIZE      000235 R   |   B MUL8LP     00175F R   |   B MULLN2     00172B R
+  B MULT       001732 R   |   B MULT8      001756 R   |   B MULTEN     00199C R
+    MULVAL  =  0023F6     |   B MVSTPT     000BE8 R   |   B NEDMOR     000D55 R
+  B NEGAFT     001AD3 R   |   B NEW        0006A4 R   |   B NEXITM     000CEE R
+  B NEXT       000E12 R   |   B NEXT1      000E15 R   |     NF      =  000000 
+  B NFERR      00059E R   |     NMIFLG  =  00234C     |   B NOCHNG     00076C R
+  B NOENED     001AAB R   |   B NOLIN      000A55 R   |   B NOMADD     001770 R
+  B NOMLAD     001941 R   |   B NOPMPT     000D33 R   |   B NORMAL     001664 R
+  B NOSPC      000763 R   |   B NOSUB7     001DB6 R   |   B NOSWAP     001613 R
+  B NOTAMP     000F11 R   |   B NOTSTR     00108B R   |   B NOXOR      0015A1 R
+  B NSCFOR     00109B R   |     NULFLG  =  002344     |   B NULL       000A79 R
+  B NULLP      000CA9 R   |     NULLS   =  002341     |   B NUMASC     0019E4 R
+  B NXTARY     001152 R   |   B NXTBYT     000752 R   |   B NXTCHR     000793 R
+    NXTDAT  =  0023DC     |   B NXTDTA     000B86 R   |   B NXTITM     000D4D R
+    NXTOPR  =  0023D0     |   B NXTSTL     000B8D R   |   B NXTSTT     000B90 R
+    OD      =  000006     |   B OKMSG      000535 R   |     OM      =  00000C 
+  B OMERR      00058D R   |   B ON         000BF8 R   |   B ONGO       000C07 R
+  B ONGOLP     000C08 R   |   B ONJMP      0009D8 R   |   B OPNPAR     000E6B R
+  B OPRND      000EE6 R   |     OS      =  00001A     |   B OTKLN      0007D4 R
+    OTPORT  =  002307     |   B OUTC       000871 R   |   B OUTEXP     001A9C R
+  B OUTIT      000852 R   |   B OUTNBS     000858 R   |   B OUTNCR     001E49 R
+    OUTSUB  =  002306     |   B OUTWRD     0008F4 R   |     OV      =  00000A 
+  B OVERR      0005A7 R   |   B OVTST1     00181B R   |   B OVTST2     001820 R
+  B OVTST3     001821 R   |   B PADD       0019C0 R   |   B PAND       000FA7 R
+  B PASSA      001227 R   |     PBUFF   =  0023E9     |   B PEEK       0015CF R
+  B PEND       000A3A R   |   B PHLTFP     00187D R   |   B PLUCDE     00169E R
+  B PNORM      00166C R   |     POINT   =  002351     |   B POKE       0015D6 R
+  B POPAF      00136B R   |   B POPHL      001495 R   |   B POPHRT     001780 R
+  B POPNOK     0005E2 R   |   B POR        000FA6 R   |   B POR1       000FC9 R
+    PORTADDR=  000052     |     PORTADDR=  000051     |     PORTAYAD=  000056 
+    PORTAYDA=  000057     |     PORTDATA=  000050     |     PORTFPGA=  00005F 
+    PORTKEY =  000055     |     PORTLEDS=  000000     |     PORTMODE=  000053 
+    PORTSERC=  000058     |     PORTSERD=  000059     |     PORTSERS=  000058 
+    PORTSER_=  000000     |     PORTSER_=  000002     |     PORTSER_=  000000 
+    PORTSER_=  000001     |     PORTTIME=  000054     |   B POS        001224 R
+  B POSINT     000A99 R   |   B POUT       001587 R   |   B POWER      001AE1 R
+  B POWER1     001AF1 R   |   B POWER2     001B0E R   |   B POWERS     001AC1 R
+  B PRINT      000C3A R   |   B PRITAB     00049F R   |   B PRNTCRLF   000C98 R
+  B PRNTHL     0019D9 R   |   B PRNTLP     000C3D R   |   B PRNTNB     000C80 R
+  B PRNTOK     0005E3 R   |   B PRNTST     000C84 R   |   B PRNUMS     001335 R
+  B PROCES     0007FF R   |     PROGND  =  0023D6     |     PROGST  =  0023F9 
+  B PROMPT     0006E7 R   |   B PRS        001336 R   |   B PRS1       001339 R
+  B PRSLP      001340 R   |     PSET    =  002354     |   B PSUB       0015F4 R
+  B PTRLP      00066C R   |   B PUTBUF     00083E R   |   B PUTCTL     000843 R
+  B PUTFID     0009AC R   |   B QTSTLP     0012FB R   |   B QTSTR      0012F5 R
+  B QUARTR     001C7A R   |     RAMTOP  =  002200     |   B READ       000D48 R
+    READFG  =  0023CD     |   B REDO       000CF5 R   |   B REM        000B89 R
+  B RESDIV     0017CD R   |   B RESEED     001C18 R   |     RESET   =  002357 
+  B RESTNL     000A15 R   |   B RESTOR     000A00 R   |   B RESZER     00165F R
+  B RETADR     001102 R   |   B RETINT     001856 R   |   B RETLIN     000B81 R
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 4.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+  B RETNAD     000778 R   |   B RETNUL     001105 R   |   B RETNUM     000F48 R
+  B RETREL     001848 R   |   B RETURN     000B62 R   |     RG      =  000004 
+  B RIGHT      001508 R   |   B RIGHT1     0014DC R   |     RINPUT  =  00234E 
+  B RLTLP      000E8B R   |   B RND        001BB7 R   |   B RND1       001BF3 R
+  B RND2       001C0F R   |   B RNDTAB     001C20 R   |   B RNGTST     001AAE R
+  B RONDB      001680 R   |   B RONDUP     00167F R   |   B ROUND      0015E7 R
+  B RSCALE     0019BA R   |   B RSLNBK     00092E R   |   B RSTSTR     00152B R
+  B RUN        000B27 R   |   B RUNCNT     0009B0 R   |   B RUNFST     0006B0 R
+  B RUNLIN     000B43 R   |   B SAVEXP     001660 R   |   B SAVSTP     0009A3 R
+  B SAVSTR     0012D0 R   |   B SBSCPT     001110 R   |   B SCALE      0016BE R
+  B SCALLP     0016C0 R   |   B SCALMI     001985 R   |   B SCALPL     00199B R
+  B SCNEND     001407 R   |   B SCPTLP     001116 R   |   B SEARCH     000740 R
+    SEED    =  002317     |   B SETIO      0015AB R   |   B SETLIN     000902 R
+  B SETLIT     00078A R   |   B SETPTR     000667 R   |   B SETTOP     00026C R
+  B SFTPRG     000631 R   |   B SGN        00184E R   |   B SGNEXP     000F96 R
+    SGNRES  =  0023E8     |   B SHRITE     0016CD R   |   B SHRLP      0016D0 R
+  B SHRT1      0016D4 R   |   B SIGNON     0002BC R   |   B SIGNS      0018A5 R
+  B SIN        001C32 R   |   B SIN1       001C62 R   |   B SINTAB     001C7E R
+  B SIXDIG     001A01 R   |   B SMPVAR     00139B R   |   B SMSER1     001B96 R
+    SN      =  000002     |   B SNERR      000598 R   |   B SPCFST     0019F2 R
+  B SPCLP      000CE7 R   |   B SQR        001AD8 R   |   B SRCHLN     000684 R
+  B SRCHLP     000687 R   |   B SSTSA      001463 R   |     ST      =  00001E 
+    STACK   =  002366     |     STACKTOP=  002100     |   B STAKFP     001870 R
+  B STALL      000A29 R   |   B STARTB     000206 R   |   B STKTHS     000ECF R
+    STLOOK  =  00245D     |   B STOP       000A38 R   |   B STORED     000B04 R
+  B STPOOL     0013DE R   |   B STR        0012C0 R   |   B STR1       0012C6 R
+  B STRADD     0013E1 R   |     STRBOT  =  0023C3     |   B STRENT     000D9F R
+    STRSPC  =  00235A     |   B STTLIN     000C8B R   |   B SUBCDE     0015F6 R
+  B SUBPHL     0015F0 R   |   B SUMLP      001B9F R   |   B SUMSER     001B87 R
+  B SUPTLZ     001A80 R   |   B SVNAM2     00106F R   |   B SVSTAD     0012EE R
+  B TAN        001C93 R   |   B TESTOS     00136D R   |   B TESTR      00134F R
+    TM      =  000018     |   B TMERR      0005AA R   |     TMPSTR  =  0023BF 
+    TMSTPL  =  0023B3     |     TMSTPT  =  0023B1     |   B TOPOOL     0014D4 R
+  B TOSTRA     00146C R   |   B TRYAGN     001A5B R   |   B TSALP      00146D R
+  B TSTBIT     001E42 R   |   B TSTBRK     000A1B R   |   B TSTMEM     00025A R
+  B TSTNUM     000E60 R   |   B TSTOPL     001316 R   |   B TSTRED     000FCE R
+  B TSTREM     00078D R   |   B TSTSGN     00183F R   |   B TSTSTR     000E61 R
+  B TTYLIN     0007DD R   |     TYPE    =  0023AD     |     UF      =  000022 
+  B UFERR      0005A4 R   |     UL      =  00000E     |   B ULERR      000B5D R
+  B UNITY      0016E2 R   |   B UPDATA     000A16 R   |     USR     =  002303 
+  B VAL        001542 R   |   B VAL1       001560 R   |   B VAL2       00156A R
+  B VAL3       00156D R   |     VAREND  =  0023D8     |   B WAIT       00158D R
+  B WAITLP     0015A2 R   |   B WARM       000203 R   |   B WARMST     0002A4 R
+  B WIDTH      001CFC R   |   B WORDS      000336 R   |   B WORDTB     000455 R
+    WRKSPC  =  002300     |     ZDATA   =  000083     |     ZDIV    =  0000AF 
+    ZEND    =  000080     |     ZEQUAL  =  0000B4     |   B ZERARY     0011B1 R
+  B ZERBYT     000534 R   |   B ZEROLP     0010F4 R   |   B ZEROSUP    001DD4 R
+    ZFN     =  0000A7     |     ZFOR    =  000081     |     ZGOSUB  =  00008C 
+    ZGOTO   =  000088     |     ZGTR    =  0000B3     |     ZLEFT   =  0000CF 
+    ZLTH    =  0000B5     |     ZMINUS  =  0000AD     |     ZNEW    =  0000A4 
+    ZNOT    =  0000AA     |   B ZONELP     000CC2 R   |     ZOR     =  0000B2 
+    ZPLUS   =  0000AC     |     ZPOINT  =  0000C7     |     ZPRINT  =  00009E 
+    ZREM    =  00008E     |     ZSGN    =  0000B6     |     ZSPC    =  0000A8 
+    ZSTEP   =  0000AB     |     ZTAB    =  0000A5     |     ZTHEN   =  0000A9 
+    ZTIMES  =  0000AE     |     ZTO     =  0000A6     |     bufrx   =  002110 
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 5.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    bufrxget=  002191     |     bufrxins=  002190     |     bufrxqty=  002192 
+  A default_   000178 R   |   9 fpga_isr   000038 R   |   9 fpga_isr   00004C R
+  9 fpga_isr   00005C R   |   9 fpga_isr   00006A R   |   9 fpga_isr   00003A R
+  A has_rxch   000174 R   |   A init       000100 R   |     isr0vect=  002100 
+    isr1vect=  002102     |     isr2vect=  002104     |     isr3vect=  002106 
+    isr4vect=  002108     |     isr5vect=  00210A     |     isr6vect=  00210C 
+    isr7vect=  00210E     |   A prints     000162 R   |   9 ps2_isr    000077 R
+  A rx_char    000179 R   |   A rx_char0   000180 R   |   A rx_char1   0001A5 R
+  A rx_char2   000190 R   |   9 rx_isr     00007A R   |   9 rx_isr1    000084 R
+  9 rx_isr1a   00008F R   |   9 rx_isr2    0000AA R   |   A signon     000138 R
+    timecoun=  0021FE     |   9 timer_is   00006F R   |   A tx_char    00016B R
+  A wait_tx    00016D R
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Zilog Z80 / Hitachi HD64180 / ZX-Next / eZ80), page 6.
+Hexadecimal [24-Bits]
+
+Area Table
+
+   0 _CODE      size      0   flags    0
+   1 _HEADER    size      0   flags    8
+   2 _HEADER0   size      3   flags    8
+   3 _HEADER1   size      3   flags    8
+   4 _HEADER2   size      3   flags    8
+   5 _HEADER3   size      3   flags    8
+   6 _HEADER4   size      2   flags    8
+   7 _HEADER5   size      2   flags    8
+   8 _HEADER6   size      2   flags    8
+   9 _HEADER7   size     76   flags    8
+   A _HEADER8   size     AC   flags    8
+   B _HEADER9   size   1C4F   flags    8
+   C _DATA      size      0   flags    0
+

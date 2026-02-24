@@ -38,6 +38,8 @@ end_sound:	ld	a,#7			;Disable all
 		ld	a,#0b00111111
 		out	(PORTAYDATA),a
 		ld	(r7copy),a
+		xor	a
+		ld	(sound_state),a
 		ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

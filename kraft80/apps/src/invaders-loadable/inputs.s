@@ -12,9 +12,9 @@
 
 		.area	CODE
 
-		.globl	init_inputs, update_inputs
-		
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+		.globl	init_inputs, update_inputs, wait_fire
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 init_inputs:
 		xor	a
@@ -28,7 +28,18 @@ init_inputs:
 		ei
 		ret
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+wait_fire:	call	menu_update
+		call	update_inputs
+		bit	0,a
+		ret	nz
+		ld	a,(portbuttons_kbd)
+		bit	0,a
+		ret	nz
+		jr	wait_fire
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 update_inputs:
 		; return inputs in ACC as:
@@ -45,7 +56,7 @@ update_inputs:
 		or	c
 		ret
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ps2_isr:
 		; SPACE: 0x29      / 0xF0-0x29
@@ -67,7 +78,7 @@ ps2_isr:
 		cp	#3
 		jr	z,ps2_state3
 		jr	ps2_st2_c
-		
+
 ps2_state0:	; STATE 0
 		ld	a,c
 		cp	#0x29		; Space, make
@@ -106,7 +117,7 @@ ps2_state2:	; STATE 2
 		ld	a,#3
 		ld	(kbd_state),a
 		jr	ps2_end
-		
+
 ps2_st2_a:	cp	#0x6b		; Left, make
 		jr	nz,ps2_st2_b
 		ld	a,(portbuttons_kbd)

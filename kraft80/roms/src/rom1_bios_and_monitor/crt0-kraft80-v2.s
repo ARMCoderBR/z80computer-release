@@ -164,21 +164,22 @@ PORTFPGASTATUS	.equ	0x5F
 	;///////////////////////////////////////////////////////////////////////
 	;//////////////////////////   ISR DISPATCH   ///////////////////////////
 	;///////////////////////////////////////////////////////////////////////
+
 	.org	0x38
 	jp	fpga_isr
 
 	;;;; END OF HEADER SECTION
 
-	.area	CODE
+	.area	_CODE
 
 signon:
-	.ascii	'\r\nKraft 80 - Z80 Computer - BIOS v'
-	.ascii	'1.0.2'
+	.ascii	'\r\nKraft 80 v'
+	.ascii	'1.0.3'
 	.ascii	'\r\n\0'
 
 msgk1:	.ascii	'Kraft 80\0'
-msgk2:	.ascii	'BIOS v'
-	.ascii	'1.0.2'
+msgk2:	.ascii	'v'
+	.ascii	'1.0.3'
 	.ascii	'\0'
 
 fpga_isr:
@@ -227,14 +228,13 @@ fpga_isrend:
 
 	;///////////////////////////////////////////////////////////////////////
 
-
 timer_isr:
 	ld	a,(timecount)
 	inc	a
 	ld	(timecount),a
+	jp	ch376_timer_cb
 	;out	(PORTLEDS),a
-	ret
-
+	;ret
 
 ps2_isr:
 	ld	a,(bufkeyqty)
@@ -263,6 +263,7 @@ key_isr1:
 	cp	#BUFKEYSIZE
 	jr	c,key_isr2
 	xor	a
+
 key_isr2:	
 	ld	(bufkeyins),a
 	ret
@@ -309,6 +310,7 @@ rx_isr2:
 	ret
 
 	;///////////////////////////////////////////////////////////////////////
+
 mon_putchar:
 	push	hl
 	ld	hl,#sysflag
@@ -483,6 +485,7 @@ user_fns:
 	;///////////////////////////////////////////////////////////////////////
 
 	;///////////////////////////////////////////////////////////////////////
+
 tx_char:
         ;di
 	out	(PORTSERDATA),a
@@ -494,12 +497,14 @@ wait_tx:
 	ret
 
 	;///////////////////////////////////////////////////////////////////////
+
 has_rxchar:
 	ld	a,(bufrxqty)
 	or	a
 	ret
 
 	;///////////////////////////////////////////////////////////////////////
+
 rx_char:
 	ld	a,(bufrxqty)
 	or	a
@@ -673,6 +678,7 @@ putclr1:xor	a
 	ret
 
 	;///////////////////////////////////////////////////////////////////////
+
 scroll_crt:
 	push	bc
 	push	de
@@ -1209,8 +1215,8 @@ gsinit_next:
         ret
 
 	;; Ordering of segments for the linker.
-	.area	_HOME
 	.area	_CODE
+	.area	_HOME
 	.area	_INITIALIZER
 	.area   _GSINIT
 	.area   _GSFINAL

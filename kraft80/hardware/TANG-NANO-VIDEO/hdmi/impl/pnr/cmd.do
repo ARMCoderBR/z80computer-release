@@ -1,9 +1,9 @@
--d /home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/impl/gwsynthesis/hdmi.vg
+-d Z:\hdmi\impl\gwsynthesis\hdmi.vg
 -p GW1NR-9C-QFN88P-6
 -pn GW1NR-LV9QN88PC6/I5
--cst /home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi.cst
--cfg /home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/impl/pnr/device.cfg
--sdc /home/milton/kraft80/hardware/TANG-NANO-VIDEO/hdmi/src/hdmi.sdc
+-cst Z:\hdmi\src\hdmi.cst
+-cfg Z:\hdmi\impl\pnr\device.cfg
+-sdc Z:\hdmi\src\hdmi.sdc
 -bit
 -tr
 -ph

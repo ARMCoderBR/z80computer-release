@@ -93,3 +93,5 @@ IO_LOC "disk_miso" 39;
 IO_PORT "disk_miso" IO_TYPE=LVCMOS33 PULL_MODE=UP;
 IO_LOC "disk_cs" 76;
 IO_PORT "disk_cs" IO_TYPE=LVCMOS33 PULL_MODE=UP;
+IO_LOC "disk_reset" 77;
+IO_PORT "disk_reset" IO_TYPE=LVCMOS33 PULL_MODE=UP;

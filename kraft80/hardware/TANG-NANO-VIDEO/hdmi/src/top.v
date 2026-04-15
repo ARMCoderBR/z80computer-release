@@ -26,6 +26,7 @@ module top(
   output disk_sck,
   output disk_cs,
   input disk_miso,
+  output disk_reset,
 
   /////////////////////////////////////////////
   input clk,
@@ -105,7 +106,8 @@ SPI_module spi_1(
     .disk_mosi(disk_mosi),
     .disk_sck(disk_sck),
     .disk_cs(disk_cs),
-    .disk_miso(disk_miso)
+    .disk_miso(disk_miso),
+    .disk_reset(disk_reset)
 );
 
 SERIAL_module serial_1(
